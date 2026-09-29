@@ -163,3 +163,18 @@ test("free speech can infer an explicit ability name", () => {
   assert.equal(suggestion.fields.cost, 5);
   assert.equal(suggestion.mechanics.frequency, "once_turn");
 });
+
+
+test("single-line parameter prompt accepts shorthand D12", () => {
+  const suggestion = interpretMechanics(
+    "Nome da habilidade: Punho Espacial, descrição: dá um soco no ar e racha o espaço, dano: D12, custo de mana: 5, uso: uma vez por turno",
+    { context: "ability" }
+  );
+
+  assert.equal(suggestion.fields.name, "Punho Espacial");
+  assert.equal(suggestion.fields.description, "dá um soco no ar e racha o espaço");
+  assert.equal(suggestion.fields.dice[0].expression, "1d12");
+  assert.equal(suggestion.fields.cost, 5);
+  assert.equal(suggestion.mechanics.frequency, "once_turn");
+  assert.equal(suggestion.mechanics.magicActionEligible, true);
+});
