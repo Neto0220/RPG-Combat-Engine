@@ -29,7 +29,9 @@ export function createCombatState(options = {}) {
     activeAbilityIds: [...(options.activeAbilityIds || [])],
     usedTurn: [...(options.usedTurn || [])],
     usedCombat: [...(options.usedCombat || [])],
-    secondaryUsed: Boolean(options.secondaryUsed)
+    secondaryUsed: false,
+    phase: options.phase === "magic" ? "magic" : "attack",
+    comboLog: [...(options.comboLog || [])]
   };
 }
 
@@ -252,6 +254,10 @@ export function resolveAttackSequence({
     );
   }
 
+  stateAfter.phase = "magic";
+  stateAfter.comboLog = [];
+  stateAfter.secondaryUsed = false;
+
   return {
     actor: actorAfter,
     target: targetAfter,
@@ -271,8 +277,14 @@ export function nextTurn(state) {
     turn: number(state.turn, 1) + 1,
     activeAbilityIds: [],
     usedTurn: [],
-    secondaryUsed: false
+    secondaryUsed: false,
+    phase: "attack",
+    comboLog: []
   };
+}
+
+export function finishTurn(state) {
+  return nextTurn(state);
 }
 
 function groupedAbilities(actor = {}) {
@@ -357,8 +369,8 @@ export function resolveWeaponAction({
     throw new Error(`Weapon action not found: ${actionId}`);
   }
 
-  if (state.secondaryUsed) {
-    throw new Error("Secondary action already used");
+  if (state.phase !== "magic") {
+    throw new Error("Combo phase is not open");
   }
 
   if (!canUseByFrequency(action, state)) {
@@ -384,7 +396,17 @@ export function resolveWeaponAction({
   const spending = spendResource(actorAfter, cost);
   actorAfter = spending.actor;
   stateAfter = markUsed(stateAfter, action);
-  stateAfter.secondaryUsed = true;
+  stateAfter.secondaryUsed = false;
+  stateAfter.comboLog = [
+    ...(stateAfter.comboLog || []),
+    {
+      kind: "weapon",
+      id: action.id,
+      name: action.name || action.id,
+      resource: cost.resource,
+      spent: spending.spent
+    }
+  ];
 
   const weapon = (actorAfter.weapons || []).find(
     (candidate) => String(candidate.id) === String(action.weaponId)
@@ -483,8 +505,8 @@ export function resolveMagicAction({
     throw new Error(`Magic action not found: ${actionId}`);
   }
 
-  if (state.secondaryUsed) {
-    throw new Error("Secondary action already used");
+  if (state.phase !== "magic") {
+    throw new Error("Combo phase is not open");
   }
 
   if (!canUseByFrequency(action, state)) {
@@ -510,7 +532,17 @@ export function resolveMagicAction({
   const spending = spendResource(actorAfter, cost);
   actorAfter = spending.actor;
   stateAfter = markUsed(stateAfter, action);
-  stateAfter.secondaryUsed = true;
+  stateAfter.secondaryUsed = false;
+  stateAfter.comboLog = [
+    ...(stateAfter.comboLog || []),
+    {
+      kind: "magic",
+      id: action.id,
+      name: action.name || action.id,
+      resource: cost.resource,
+      spent: spending.spent
+    }
+  ];
 
   let total = 0;
   const dice = [];
