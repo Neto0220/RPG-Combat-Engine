@@ -1,4 +1,4 @@
-export const MECHANICS_KB_VERSION = 1;
+export const MECHANICS_KB_VERSION = 2;
 
 export const MECHANICS_KB = Object.freeze({
   attributes: [
@@ -117,6 +117,89 @@ function findDice(text) {
     .map((match) => match[1].replace(/\s+/g, ""));
 }
 
+
+const CREATION_LABELS = Object.freeze({
+  name: ["nome", "nome da habilidade", "nome da arma", "nome do item", "nome da classe", "nome da subclasse", "habilidade", "arma", "item", "classe", "subclasse"],
+  description: ["descricao", "descrição", "efeito", "o que faz", "como funciona"],
+  damage: ["dano", "damage"],
+  manaCost: ["custo de mana", "mana", "custo mana"],
+  lifeCost: ["custo de vida", "custo de pv", "vida", "pv"],
+  defenseCost: ["custo de defesa", "defesa gasta"],
+  use: ["uso", "frequencia", "frequência", "limite", "recarga"],
+  requirement: ["requisito", "condicao", "condição", "requer"],
+  duration: ["duracao", "duração"],
+  type: ["tipo", "categoria"],
+  extraAttacks: ["ataques extras", "ataque extra"],
+  status: ["status", "efeito de status", "stacks"],
+  attribute: ["atributo", "atributo de dano", "modificador"]
+});
+
+function normalizedLabel(label) {
+  return normalize(label).replace(/[^a-z0-9 ]/g, "").trim();
+}
+
+function labelKey(label) {
+  const n = normalizedLabel(label);
+  for (const [key, aliases] of Object.entries(CREATION_LABELS)) {
+    if (aliases.some((alias) => normalizedLabel(alias) === n)) return key;
+  }
+  return null;
+}
+
+function splitCreationFields(text) {
+  const raw = String(text || "").replace(/\r/g, "");
+  const matches = [...mechanicsRaw.matchAll(/(?:^|[\n;])\s*([^:\n;]{1,40})\s*:\s*/g)];
+  const out = {};
+  if (!matches.length) return out;
+  for (let index = 0; index < matches.length; index += 1) {
+    const current = matches[index];
+    const key = labelKey(current[1]);
+    if (!key) continue;
+    const start = current.index + current[0].length;
+    const end = index + 1 < matches.length ? matches[index + 1].index : raw.length;
+    const value = raw.slice(start, end).trim().replace(/[;\s]+$/, "");
+    if (value) out[key] = value;
+  }
+  return out;
+}
+
+function inferEntityName(text, context) {
+  const raw = String(text || "");
+  const patterns = [
+    /\b(?:nome\s+(?:da|do)\s+(?:habilidade|arma|item|classe|subclasse)|nome)\s*(?:é|eh|:|-)\s*["“]?([^,.;\n"”]{2,80})/i,
+    /\b(?:a\s+)?habilidade\s+(?:se\s+chama|chama-se|é|eh)\s+["“]?([^,.;\n"”]{2,80})/i,
+    /\b(?:a\s+)?arma\s+(?:se\s+chama|chama-se|é|eh)\s+["“]?([^,.;\n"”]{2,80})/i,
+    /\b(?:o\s+)?item\s+(?:se\s+chama|chama-se|é|eh)\s+["“]?([^,.;\n"”]{2,80})/i,
+    /\b(?:a\s+)?classe\s+(?:se\s+chama|chama-se|é|eh)\s+["“]?([^,.;\n"”]{2,80})/i,
+    /\b(?:a\s+)?subclasse\s+(?:se\s+chama|chama-se|é|eh)\s+["“]?([^,.;\n"”]{2,80})/i
+  ];
+  for (const pattern of patterns) {
+    const match = mechanicsRaw.match(pattern);
+    if (match) return match[1].trim();
+  }
+  return null;
+}
+
+function looksLikeStructuredCreation(fields) {
+  return Object.keys(fields).length >= 2;
+}
+
+function buildMechanicsText(raw, fields) {
+  const pieces = [raw];
+  if (fields.damage) pieces.push("dano " + fields.damage);
+  if (fields.manaCost) pieces.push("custa " + fields.manaCost + " mana");
+  if (fields.lifeCost) pieces.push("custa " + fields.lifeCost + " vida");
+  if (fields.defenseCost) pieces.push("custa " + fields.defenseCost + " defesa");
+  if (fields.use) pieces.push(fields.use);
+  if (fields.requirement) pieces.push("requer " + fields.requirement);
+  if (fields.duration) pieces.push("por " + fields.duration);
+  if (fields.extraAttacks) pieces.push("ganha " + fields.extraAttacks + " ataques extras");
+  if (fields.status) pieces.push("aplica " + fields.status);
+  if (fields.attribute) pieces.push(fields.attribute);
+  if (fields.type) pieces.push(fields.type);
+  return pieces.join(". ");
+}
+
 function nonDefaultMechanics(mechanics) {
   return Object.entries(mechanics).some(([key, value]) => {
     if (key === "enabled") return Boolean(value);
@@ -142,7 +225,9 @@ export function interpretMechanics(text, options = {}) {
     requirements: [],
     tags: [],
     matches: [],
-    warnings: []
+    warnings: [],
+    explicitFields: [],
+    structured: false
   };
 
   if (!normalized) {
@@ -151,13 +236,30 @@ export function interpretMechanics(text, options = {}) {
     return result;
   }
 
-  const frequency = detectAlias(normalized, MECHANICS_KB.frequencies);
+
+  const creationFields = splitCreationFields(raw);
+  result.structured = looksLikeStructuredCreation(creationFields);
+  const explicitName = creationFields.name || inferEntityName(raw, context);
+  if (explicitName) {
+    result.fields.name = explicitName;
+    result.explicitFields.push("name");
+    pushMatch(result, "name", explicitName, 0.995, explicitName);
+  }
+  if (creationFields.description) {
+    result.fields.description = creationFields.description;
+    result.explicitFields.push("description");
+    pushMatch(result, "description", creationFields.description, 0.995, creationFields.description);
+  }
+  const mechanicsRaw = buildMechanicsText(raw, creationFields);
+  const mechanicsNormalized = normalize(mechanicsRaw);
+
+  const frequency = detectAlias(mechanicsNormalized, MECHANICS_KB.frequencies);
   if (frequency) {
     result.mechanics.frequency = frequency.id;
     pushMatch(result, "frequency", frequency.id, 0.98, frequency.alias);
   }
 
-  const timing = detectAlias(normalized, MECHANICS_KB.timings);
+  const timing = detectAlias(mechanicsNormalized, MECHANICS_KB.timings);
   if (timing) {
     result.mechanics.timing = timing.id;
     if (timing.id === "magic_action") {
@@ -169,8 +271,26 @@ export function interpretMechanics(text, options = {}) {
     pushMatch(result, "timing", timing.id, 0.95, timing.alias);
   }
 
+  if (creationFields.manaCost) {
+    result.fields.cost = number(creationFields.manaCost);
+    result.fields.costResource = "mana";
+    result.explicitFields.push("cost", "costResource");
+    pushMatch(result, "cost", { resource: "mana", amount: result.fields.cost }, 0.995, "Custo de mana: " + creationFields.manaCost);
+  }
+  if (creationFields.lifeCost) {
+    result.fields.cost = number(creationFields.lifeCost);
+    result.fields.costResource = "life";
+    result.explicitFields.push("cost", "costResource");
+    pushMatch(result, "cost", { resource: "life", amount: result.fields.cost }, 0.995, "Custo de vida: " + creationFields.lifeCost);
+  }
+  if (creationFields.defenseCost) {
+    result.fields.defenseCost = number(creationFields.defenseCost);
+    result.explicitFields.push("defenseCost");
+    pushMatch(result, "defense_cost", result.fields.defenseCost, 0.995, "Custo de defesa: " + creationFields.defenseCost);
+  }
+
   const costRegex = /\b(?:custa|gasta|consome|usar custa|costs?)\s*(\d+(?:[.,]\d+)?)\s*(mana|mp|vida|pv|hp|life|defesa|def|defense|stamina|vigor|energia|energy)\b/gi;
-  for (const match of raw.matchAll(costRegex)) {
+  for (const match of mechanicsRaw.matchAll(costRegex)) {
     const amount = number(match[1]);
     const resource = resourceId(match[2]);
     if (resource === "defense") result.fields.defenseCost = amount;
@@ -181,24 +301,47 @@ export function interpretMechanics(text, options = {}) {
     pushMatch(result, "cost", { resource, amount }, 0.99, match[0]);
   }
 
-  if (/\b(?:sem custo|gratuit[oa]|gratis|grátis|free)\b/i.test(raw)) {
+  if (creationFields.use) {
+    const f = detectAlias(creationFields.use, MECHANICS_KB.frequencies);
+    if (f) {
+      result.mechanics.frequency = f.id;
+      result.explicitFields.push("mechanics.frequency");
+      pushMatch(result, "frequency", f.id, 0.995, creationFields.use);
+    }
+  }
+
+  if (creationFields.type) {
+    const t = detectAlias(creationFields.type, MECHANICS_KB.timings);
+    if (t) {
+      result.mechanics.timing = t.id;
+      result.explicitFields.push("mechanics.timing");
+      if (t.id === "magic_action") {
+        result.mechanics.magicActionEligible = true;
+        result.mechanics.duration = "instant";
+        result.mechanics.statusPerHit = false;
+      }
+      pushMatch(result, "timing", t.id, 0.995, creationFields.type);
+    }
+  }
+
+  if (/\b(?:sem custo|gratuit[oa]|gratis|grátis|free)\b/i.test(mechanicsRaw)) {
     result.fields.cost = 0;
     pushMatch(result, "cost", { resource: "mana", amount: 0 }, 0.96, "sem custo");
   }
 
-  const convert = raw.match(/\b(?:recupera|recebe|restaura|ganha)\s*(\d+(?:[.,]\d+)?)\s*(mana|vida|pv|hp|life)\b/i);
+  const convert = mechanicsRaw.match(/\b(?:recupera|recebe|restaura|ganha)\s*(\d+(?:[.,]\d+)?)\s*(mana|vida|pv|hp|life)\b/i);
   if (convert && !/\bdano\b/i.test(convert[0])) {
     result.fields.convertAmount = number(convert[1]);
     result.fields.convertResource = resourceId(convert[2]) === "life" ? "life" : "mana";
     pushMatch(result, "resource_gain", { resource: result.fields.convertResource, amount: result.fields.convertAmount }, 0.86, convert[0]);
   }
 
-  if (/\b(?:outra habilidade|proxima habilidade|próxima habilidade).{0,30}(?:sem custo|gratis|grátis)\b/i.test(raw)) {
+  if (/\b(?:outra habilidade|proxima habilidade|próxima habilidade).{0,30}(?:sem custo|gratis|grátis)\b/i.test(mechanicsRaw)) {
     result.fields.coversOtherCost = true;
     pushMatch(result, "covers_other_cost", true, 0.93);
   }
 
-  const every = raw.match(/\ba cada\s+(\d+)\s+ataques?.{0,35}?(?:gera|ganha|faz|realiza|adiciona)\s+(\d+)\s+ataques?\s+extras?\b/i);
+  const every = mechanicsRaw.match(/\ba cada\s+(\d+)\s+ataques?.{0,35}?(?:gera|ganha|faz|realiza|adiciona)\s+(\d+)\s+ataques?\s+extras?\b/i);
   if (every) {
     result.mechanics.attackEvery = Math.max(1, number(every[1], 1));
     result.mechanics.attackGrant = Math.max(1, number(every[2], 1));
@@ -207,8 +350,8 @@ export function interpretMechanics(text, options = {}) {
     pushMatch(result, "generated_attacks", { every: result.mechanics.attackEvery, grant: result.mechanics.attackGrant }, 0.99, every[0]);
   }
 
-  const extras = raw.match(/\b(?:ganha|gera|faz|realiza|adiciona|recebe)\s*\+?\s*(\d+)\s+ataques?\s+extras?\b/i)
-    || raw.match(/\+\s*(\d+)\s+ataques?\b/i);
+  const extras = mechanicsRaw.match(/\b(?:ganha|gera|faz|realiza|adiciona|recebe)\s*\+?\s*(\d+)\s+ataques?\s+extras?\b/i)
+    || mechanicsRaw.match(/\+\s*(\d+)\s+ataques?\b/i);
   if (extras && !every) {
     result.mechanics.extraAttacks = Math.max(0, number(extras[1]));
     if (result.mechanics.timing === "passive") result.mechanics.duration = "combat";
@@ -219,23 +362,23 @@ export function interpretMechanics(text, options = {}) {
     pushMatch(result, "extra_attacks", result.mechanics.extraAttacks, 0.97, extras[0]);
   }
 
-  if (/\b(?:recursiv|inclusive os ataques gerados|ataques gerados tambem|ataques gerados também)\b/i.test(raw)) {
+  if (/\b(?:recursiv|inclusive os ataques gerados|ataques gerados tambem|ataques gerados também)\b/i.test(mechanicsRaw)) {
     result.mechanics.recursiveAttacks = true;
     pushMatch(result, "recursive_attacks", true, 0.95);
   }
 
-  const guaranteed = raw.match(/\b(\d+)\s+ataques?\s+(?:garantidos?|automaticos?|automáticos?)\b/i);
-  if (guaranteed || /\bsem teste de defesa\b/i.test(raw)) {
+  const guaranteed = mechanicsRaw.match(/\b(\d+)\s+ataques?\s+(?:garantidos?|automaticos?|automáticos?)\b/i);
+  if (guaranteed || /\bsem teste de defesa\b/i.test(mechanicsRaw)) {
     result.mechanics.guaranteedAttacks = guaranteed ? number(guaranteed[1], 1) : 1;
     pushMatch(result, "guaranteed_attacks", result.mechanics.guaranteedAttacks, guaranteed ? 0.96 : 0.78);
   }
 
-  if (/\b(?:duas armas|ambidestro|ambidestria|dual wield|alternando as armas)\b/i.test(raw)) {
+  if (/\b(?:duas armas|ambidestro|ambidestria|dual wield|alternando as armas)\b/i.test(mechanicsRaw)) {
     result.mechanics.dualWield = true;
     pushMatch(result, "dual_wield", true, 0.92);
   }
 
-  if (/\barma\s+(?:principal|primaria|primária)\b/i.test(raw)) {
+  if (/\barma\s+(?:principal|primaria|primária)\b/i.test(mechanicsRaw)) {
     result.mechanics.conditionWeaponRole = "primary";
     pushMatch(result, "weapon_role", "primary", 0.96);
   } else if (/\barma\s+secundaria\b/i.test(normalized)) {
@@ -243,22 +386,22 @@ export function interpretMechanics(text, options = {}) {
     pushMatch(result, "weapon_role", "secondary", 0.96);
   }
 
-  const statusRequirement = raw.match(/\b(?:requer|precisa|necessita|somente se|apenas se).{0,45}?(\d+)\s+(?:stacks?|cargas?)\s+de\s+([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ _-]{1,32})/i);
+  const statusRequirement = mechanicsRaw.match(/\b(?:requer|precisa|necessita|somente se|apenas se).{0,45}?(\d+)\s+(?:stacks?|cargas?)\s+de\s+([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ _-]{1,32})/i);
   if (statusRequirement) {
     result.mechanics.requiredStatusMin = number(statusRequirement[1], 1);
     result.mechanics.requiredStatusName = statusRequirement[2].trim().replace(/[.,;:]$/, "");
     pushMatch(result, "required_status", { name: result.mechanics.requiredStatusName, min: result.mechanics.requiredStatusMin }, 0.94, statusRequirement[0]);
   }
 
-  const condition = raw.match(/\b(?:requer|precisa|necessita|somente se|apenas se)\s+([^.;\n]+)/i);
+  const condition = mechanicsRaw.match(/\b(?:requer|precisa|necessita|somente se|apenas se)\s+([^.;\n]+)/i);
   if (condition) {
     result.mechanics.conditionText = condition[0].trim();
     result.requirements.push(condition[0].trim());
     pushMatch(result, "condition", result.mechanics.conditionText, 0.82, condition[0]);
   }
 
-  const multAttr = raw.match(/\b(?:dobro|triplo)\s+(?:da|de)\s+(forca|força|destreza|constituicao|constituição|inteligencia|inteligência|sabedoria|carisma)\b/i)
-    || raw.match(/\b(\d+(?:[.,]\d+)?)\s*x\s*(for|forca|força|des|destreza|con|constituicao|constituição|int|inteligencia|inteligência|sab|sabedoria|car|carisma)\b/i);
+  const multAttr = mechanicsRaw.match(/\b(?:dobro|triplo)\s+(?:da|de)\s+(forca|força|destreza|constituicao|constituição|inteligencia|inteligência|sabedoria|carisma)\b/i)
+    || mechanicsRaw.match(/\b(\d+(?:[.,]\d+)?)\s*x\s*(for|forca|força|des|destreza|con|constituicao|constituição|int|inteligencia|inteligência|sab|sabedoria|car|carisma)\b/i);
   if (multAttr) {
     let factor;
     let attrRaw;
@@ -283,7 +426,7 @@ export function interpretMechanics(text, options = {}) {
     }
   }
 
-  const addAttr = raw.match(/\+\s*(\d+(?:[.,]\d+)?)\s*(for|forca|força|des|destreza|con|constituicao|constituição|int|inteligencia|inteligência|sab|sabedoria|car|carisma)\b/i);
+  const addAttr = mechanicsRaw.match(/\+\s*(\d+(?:[.,]\d+)?)\s*(for|forca|força|des|destreza|con|constituicao|constituição|int|inteligencia|inteligência|sab|sabedoria|car|carisma)\b/i);
   if (addAttr) {
     const id = attributeId(addAttr[2]);
     if (id) {
@@ -296,7 +439,7 @@ export function interpretMechanics(text, options = {}) {
     }
   }
 
-  const defense = raw.match(/(?:\+\s*(\d+)\s*(?:de\s*)?defesa|defesa\s*\+\s*(\d+))/i);
+  const defense = mechanicsRaw.match(/(?:\+\s*(\d+)\s*(?:de\s*)?defesa|defesa\s*\+\s*(\d+))/i);
   if (defense) {
     const value = number(defense[1] || defense[2]);
     result.fields.defenseBonus = value;
@@ -304,15 +447,15 @@ export function interpretMechanics(text, options = {}) {
     pushMatch(result, "defense_bonus", value, 0.95, defense[0]);
   }
 
-  const reductionDice = raw.match(/\b(?:reduz|reducao de dano|redução de dano|rd)\s*(?:em|de|:)?\s*(\d+d\d+(?:\s*[+-]\s*\d+)?)\b/i);
+  const reductionDice = mechanicsRaw.match(/\b(?:reduz|reducao de dano|redução de dano|rd)\s*(?:em|de|:)?\s*(\d+d\d+(?:\s*[+-]\s*\d+)?)\b/i);
   if (reductionDice) {
     result.mechanics.damageReductionDice = reductionDice[1].replace(/\s+/g, "");
     result.fields.damageReductionDice = result.mechanics.damageReductionDice;
     pushMatch(result, "damage_reduction_dice", result.mechanics.damageReductionDice, 0.96, reductionDice[0]);
   } else {
-    const reduction = raw.match(/\b(?:reduz)\s*(?:em|de|:)?\s*(\d+)\s*(?:de\s*)?dano\b/i)
-      || raw.match(/\b(?:reducao de dano|redução de dano|rd)\s*(?:em|de|:)?\s*(\d+)\b/i)
-      || raw.match(/\b(?:rd)\s*\+?\s*(\d+)\b/i);
+    const reduction = mechanicsRaw.match(/\b(?:reduz)\s*(?:em|de|:)?\s*(\d+)\s*(?:de\s*)?dano\b/i)
+      || mechanicsRaw.match(/\b(?:reducao de dano|redução de dano|rd)\s*(?:em|de|:)?\s*(\d+)\b/i)
+      || mechanicsRaw.match(/\b(?:rd)\s*\+?\s*(\d+)\b/i);
     if (reduction) {
       result.mechanics.damageReduction = number(reduction[1]);
       result.fields.damageReduction = result.mechanics.damageReduction;
@@ -320,33 +463,33 @@ export function interpretMechanics(text, options = {}) {
     }
   }
 
-  const negate = raw.match(/\bnega\s+(\d+)\s+ataques?\b/i);
+  const negate = mechanicsRaw.match(/\bnega\s+(\d+)\s+ataques?\b/i);
   if (negate) {
     result.mechanics.timing = "reaction";
     result.mechanics.negateAttacks = number(negate[1]);
     pushMatch(result, "negate_attacks", result.mechanics.negateAttacks, 0.97, negate[0]);
   }
 
-  const counter = raw.match(/\b(?:contra[- ]?ataca|realiza contra[- ]?ataque)\s*(\d+)?\s*(?:vezes?|x)?/i);
+  const counter = mechanicsRaw.match(/\b(?:contra[- ]?ataca|realiza contra[- ]?ataque)\s*(\d+)?\s*(?:vezes?|x)?/i);
   if (counter) {
     result.mechanics.timing = "reaction";
     result.mechanics.reactionAttacks = Math.max(1, number(counter[1], 1));
     pushMatch(result, "reaction_attacks", result.mechanics.reactionAttacks, 0.93, counter[0]);
   }
 
-  const status = raw.match(/\b(?:aplica|adiciona|gera|recebe)\s+(\d+d\d+(?:\s*[+-]\s*\d+)?|\d+)\s+(?:stacks?|cargas?)\s+de\s+([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ _-]{1,32})/i);
+  const status = mechanicsRaw.match(/\b(?:aplica|adiciona|gera|recebe)\s+(\d+d\d+(?:\s*[+-]\s*\d+)?|\d+)\s+(?:stacks?|cargas?)\s+de\s+([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ _-]{1,32})/i);
   if (status) {
     const amount = status[1].replace(/\s+/g, "");
     const name = status[2].trim().replace(/[.,;:]$/, "");
     result.mechanics.targetStatusName = name;
     if (/d/i.test(amount)) result.mechanics.targetStatusDie = amount;
     else result.mechanics.targetStatusFixed = number(amount);
-    result.mechanics.targetStatusMode = /\b(?:mantem o maior|mantém o maior|maximo|máximo)\b/i.test(raw) ? "max" : "add";
-    result.mechanics.statusPerHit = /\b(?:por acerto|a cada acerto|em cada ataque acertado)\b/i.test(raw);
+    result.mechanics.targetStatusMode = /\b(?:mantem o maior|mantém o maior|maximo|máximo)\b/i.test(mechanicsRaw) ? "max" : "add";
+    result.mechanics.statusPerHit = /\b(?:por acerto|a cada acerto|em cada ataque acertado)\b/i.test(mechanicsRaw);
     pushMatch(result, "target_status", { name, amount }, 0.98, status[0]);
   }
 
-  const statusEvery = raw.match(/\ba cada\s+(\d+)\s+(?:stacks?|cargas?)\s+(?:de\s+)?([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ _-]{1,24}).{0,35}?(?:causa|da|dá)\s+(\d+)\s+dano\b/i);
+  const statusEvery = mechanicsRaw.match(/\ba cada\s+(\d+)\s+(?:stacks?|cargas?)\s+(?:de\s+)?([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ _-]{1,24}).{0,35}?(?:causa|da|dá)\s+(\d+)\s+dano\b/i);
   if (statusEvery) {
     result.mechanics.statusName = statusEvery[2].trim();
     result.mechanics.statusEvery = number(statusEvery[1]);
@@ -354,8 +497,23 @@ export function interpretMechanics(text, options = {}) {
     pushMatch(result, "status_threshold_damage", { name: result.mechanics.statusName, every: result.mechanics.statusEvery, damage: result.mechanics.statusDamage }, 0.96, statusEvery[0]);
   }
 
-  const dice = findDice(raw);
-  const damageDiceMatches = [...raw.matchAll(/\b(\d+d\d+(?:\s*[+-]\s*\d+)?)\s*(?:de\s*)?(?:dano|damage)\b/gi)]
+  if (creationFields.damage) {
+    const structuredDice = findDice(creationFields.damage);
+    if (structuredDice.length) {
+      result.fields.dice = structuredDice.map((expression) => ({ expression, label: "Dano" }));
+      result.explicitFields.push("dice");
+      pushMatch(result, "damage_dice", structuredDice[0], 0.995, creationFields.damage);
+      if (result.mechanics.timing === "on_use" && context === "ability") {
+        result.mechanics.timing = "magic_action";
+        result.mechanics.magicActionEligible = true;
+        result.mechanics.duration = "instant";
+        result.mechanics.statusPerHit = false;
+      }
+    }
+  }
+
+  const dice = findDice(mechanicsRaw);
+  const damageDiceMatches = [...mechanicsRaw.matchAll(/\b(\d+d\d+(?:\s*[+-]\s*\d+)?)\s*(?:de\s*)?(?:dano|damage)\b/gi)]
     .map((match) => match[1].replace(/\s+/g, ""));
 
   if (damageDiceMatches.length) {
@@ -374,21 +532,21 @@ export function interpretMechanics(text, options = {}) {
     pushMatch(result, "generic_dice", dice[0], 0.67, dice[0]);
   }
 
-  const flatDamage = raw.match(/\b(?:dano|damage)\s*(?:extra|adicional)?\s*\+\s*(\d+)\b/i)
-    || raw.match(/\+\s*(\d+)\s+(?:de\s*)?dano\b/i);
+  const flatDamage = mechanicsRaw.match(/\b(?:dano|damage)\s*(?:extra|adicional)?\s*\+\s*(\d+)\b/i)
+    || mechanicsRaw.match(/\+\s*(\d+)\s+(?:de\s*)?dano\b/i);
   if (flatDamage) {
     result.mechanics.bonusDamageFlat = number(flatDamage[1]);
     pushMatch(result, "bonus_damage_flat", result.mechanics.bonusDamageFlat, 0.91, flatDamage[0]);
   }
 
-  const damageMult = raw.match(/\b(?:dano|damage)\s*(?:x|×)\s*(\d+(?:[.,]\d+)?)\b/i)
-    || raw.match(/\b(\d+(?:[.,]\d+)?)\s*(?:x|×)\s*(?:o\s+)?dano\b/i);
+  const damageMult = mechanicsRaw.match(/\b(?:dano|damage)\s*(?:x|×)\s*(\d+(?:[.,]\d+)?)\b/i)
+    || mechanicsRaw.match(/\b(\d+(?:[.,]\d+)?)\s*(?:x|×)\s*(?:o\s+)?dano\b/i);
   if (damageMult) {
     result.mechanics.damageMultiplier = number(damageMult[1], 1);
     pushMatch(result, "damage_multiplier", result.mechanics.damageMultiplier, 0.94, damageMult[0]);
   }
 
-  const durationTurns = raw.match(/\bpor\s+(\d+)\s+(?:turnos?|rodadas?|rounds?)\b/i);
+  const durationTurns = mechanicsRaw.match(/\bpor\s+(\d+)\s+(?:turnos?|rodadas?|rounds?)\b/i);
   if (durationTurns) {
     result.mechanics.effectDuration = number(durationTurns[1]);
     result.mechanics.effectDurationUnit = /rodad|round/i.test(durationTurns[0]) ? "round" : "turn";
@@ -405,7 +563,7 @@ export function interpretMechanics(text, options = {}) {
 
   if (result.mechanics.timing === "magic_action") {
     result.mechanics.magicActionEligible = true;
-    result.mechanics.magicActionLabel = /\btecnica|técnica\b/i.test(raw) ? "Técnica" : "Magia";
+    result.mechanics.magicActionLabel = /\btecnica|técnica\b/i.test(mechanicsRaw) ? "Técnica" : "Magia";
     result.mechanics.actionLabel = result.mechanics.magicActionLabel;
   }
 
@@ -514,15 +672,25 @@ export function applyMechanicsSuggestion(entity = {}, suggestion, options = {}) 
     if (overwrite || mechanicIsDefault(key, existingMechanics[key])) next.mechanics[key] = structuredClone(value);
   }
 
+  const explicit = new Set(suggestion.explicitFields || []);
   for (const [key, value] of Object.entries(suggestion.fields || {})) {
     const canReplaceResourceDefault = key === "costResource" && (next.cost == null || number(next.cost) === 0);
-    if (overwrite || emptyLike(next[key]) || canReplaceResourceDefault) next[key] = structuredClone(value);
+    const explicitlyDirected = explicit.has(key);
+    if (overwrite || explicitlyDirected || emptyLike(next[key]) || canReplaceResourceDefault) next[key] = structuredClone(value);
+  }
+
+  for (const path of explicit) {
+    if (!path.startsWith("mechanics.")) continue;
+    const key = path.slice("mechanics.".length);
+    if (key in (suggestion.mechanics || {})) next.mechanics[key] = structuredClone(suggestion.mechanics[key]);
   }
 
   next.mechanicsInterpretation = {
     version: suggestion.version,
     confidence: suggestion.confidence,
-    matches: suggestion.matches.map(({ rule, value }) => ({ rule, value }))
+    matches: suggestion.matches.map(({ rule, value }) => ({ rule, value })),
+    explicitFields: [...(suggestion.explicitFields || [])],
+    structured: Boolean(suggestion.structured)
   };
   return next;
 }
@@ -542,6 +710,7 @@ if (typeof window !== "undefined") {
     knowledgeBase: MECHANICS_KB,
     interpretMechanics,
     applyMechanicsSuggestion,
-    explainMechanicsSuggestion
+    explainMechanicsSuggestion,
+    splitCreationFields
   });
 }
