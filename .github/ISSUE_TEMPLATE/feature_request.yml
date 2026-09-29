@@ -1,0 +1,24 @@
+name: Sugestão
+description: Sugira uma melhoria de API, documentação ou experiência de desenvolvimento.
+title: "[Sugestão] "
+labels: []
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problema que a sugestão resolve
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposta
+    validations:
+      required: true
+
+  - type: textarea
+    id: example
+    attributes:
+      label: Exemplo de uso
+      render: javascript
