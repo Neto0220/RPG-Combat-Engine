@@ -313,10 +313,13 @@ export function resolveWeaponAction({
     throw new Error(`Weapon action unavailable by frequency: ${action.id}`);
   }
 
-  if (action.condition && !confirmCondition) {
+  const mechanics = action.mechanics || {};
+  const condition = action.condition || mechanics.conditionText || "";
+
+  if (condition && !confirmCondition) {
     return {
       requiresConfirmation: true,
-      condition: action.condition,
+      condition,
       action
     };
   }
@@ -337,14 +340,18 @@ export function resolveWeaponAction({
   let damage = 0;
   const dice = [];
 
-  for (const expression of action.damageDice || action.dice || []) {
+  const damageDice = (action.damageDice || action.dice || []).map(
+    (entry) => entry?.expression || entry
+  );
+
+  for (const expression of damageDice) {
     const result = rollDice(expression, rng);
     dice.push(result);
     damage += result.total;
   }
 
   const attributes = [];
-  for (const attribute of action.damageAttributes || []) {
+  for (const attribute of action.damageAttributes || action.attributeDamage || []) {
     const result = calculateAttribute({
       actor: actorAfter,
       attribute,
@@ -355,14 +362,36 @@ export function resolveWeaponAction({
     damage += result.total;
   }
 
-  if (action.status?.name) {
-    const fixed = number(action.status.fixed);
-    const die = action.status.die ? rollDice(action.status.die, rng).total : 0;
-    targetAfter = applyStatus(
-      targetAfter,
-      action.status.name,
-      fixed + die
-    );
+  const status = action.status || {
+    name: mechanics.targetStatusName || mechanics.statusName || "",
+    fixed:
+      mechanics.targetStatusFixed ??
+      mechanics.statusFixed ??
+      0,
+    die: mechanics.targetStatusDie || mechanics.statusDie || "",
+    mode: mechanics.targetStatusMode || "add"
+  };
+
+  let appliedStatus = null;
+
+  if (status?.name) {
+    const fixed = number(status.fixed);
+    const die = status.die ? rollDice(status.die, rng).total : 0;
+    const amount = fixed + die;
+
+    if (amount !== 0) {
+      const current = number(targetAfter?.statuses?.[status.name]);
+
+      if (status.mode === "max") {
+        targetAfter = clone(targetAfter || {});
+        targetAfter.statuses = { ...(targetAfter.statuses || {}) };
+        targetAfter.statuses[status.name] = Math.max(current, amount);
+      } else {
+        targetAfter = applyStatus(targetAfter, status.name, amount);
+      }
+
+      appliedStatus = { name: status.name, amount };
+    }
   }
 
   return {
@@ -371,8 +400,14 @@ export function resolveWeaponAction({
     target: targetAfter,
     state: stateAfter,
     action,
+    metadata: {
+      label: action.actionLabel || mechanics.actionLabel || "",
+      condition,
+      effect: action.effectText || mechanics.effectText || ""
+    },
     dice,
     attributes,
+    appliedStatus,
     spent: { [cost.resource]: spending.spent },
     damage
   };
