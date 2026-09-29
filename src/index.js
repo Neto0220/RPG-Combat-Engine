@@ -92,3 +92,12 @@ export {
   consumeAmmo,
   resolveReliability
 } from "./firearms.js";
+
+
+export {
+  MECHANICS_KB_VERSION,
+  MECHANICS_KB,
+  interpretMechanics,
+  applyMechanicsSuggestion,
+  explainMechanicsSuggestion
+} from "./interpreter.js";
