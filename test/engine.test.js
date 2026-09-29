@@ -8,7 +8,8 @@ import {
   resolveWeaponAction,
   listMagicActions,
   resolveMagicAction,
-  nextTurn
+  nextTurn,
+  finishTurn
 } from "../src/index.js";
 
 const lowRoll = () => 0;
@@ -164,7 +165,8 @@ test("weapon actions are resolved separately from the normal attack sequence", (
 
   const state = createCombatState({
     primaryWeaponId: "sword",
-    secondaryWeaponId: "dagger"
+    secondaryWeaponId: "dagger",
+    phase: "magic"
   });
 
   const preview = resolveWeaponAction({
@@ -189,7 +191,8 @@ test("weapon actions are resolved separately from the normal attack sequence", (
   assert.equal(result.damage, 5);
   assert.equal(result.actor.resources.mana.current, 80);
   assert.equal(result.state.usedCombat.includes("finisher"), true);
-  assert.equal(result.state.secondaryUsed, true);
+  assert.equal(result.state.phase, "magic");
+  assert.equal(result.state.comboLog.length, 1);
 
   assert.throws(() =>
     resolveWeaponAction({
@@ -217,6 +220,8 @@ test("nextTurn clears optional selections and once-turn usage", () => {
   assert.deepEqual(next.usedTurn, []);
   assert.deepEqual(next.usedCombat, ["b"]);
   assert.equal(next.secondaryUsed, false);
+  assert.equal(next.phase, "attack");
+  assert.deepEqual(next.comboLog, []);
 });
 
 
@@ -246,7 +251,8 @@ test("app-shaped weapon abilities use generic mechanics metadata", () => {
 
   const state = createCombatState({
     primaryWeaponId: "sword",
-    secondaryWeaponId: "dagger"
+    secondaryWeaponId: "dagger",
+    phase: "magic"
   });
 
   const preview = resolveWeaponAction({
@@ -278,19 +284,31 @@ test("app-shaped weapon abilities use generic mechanics metadata", () => {
 });
 
 
-test("magic and weapon actions share the same second-action slot", () => {
-  const actor = baseActor();
-  actor.abilities.push({
-    id: "spell",
-    name: "Spell",
-    cost: { resource: "mana", amount: 10 },
-    dice: [{ expression: "+1", label: "Stack Frost" }],
-    mechanics: {
-      enabled: true,
-      timing: "magic_action",
-      magicActionEligible: true
+test("combo phase accepts multiple magic and weapon actions until the turn ends", () => {
+  let actor = baseActor();
+  actor.abilities.push(
+    {
+      id: "spell-a",
+      name: "Spell A",
+      cost: { resource: "mana", amount: 10 },
+      dice: [{ expression: "+1", label: "Stack Frost" }],
+      mechanics: {
+        enabled: true,
+        timing: "magic_action",
+        magicActionEligible: true
+      }
+    },
+    {
+      id: "spell-b",
+      name: "Spell B",
+      cost: { resource: "mana", amount: 15 },
+      mechanics: {
+        enabled: true,
+        timing: "magic_action",
+        magicActionEligible: true
+      }
     }
-  });
+  );
   actor.weapons[0].actions = [
     {
       id: "weapon-special",
@@ -301,33 +319,98 @@ test("magic and weapon actions share the same second-action slot", () => {
     }
   ];
 
-  const state = createCombatState({
+  let state = createCombatState({
     primaryWeaponId: "sword",
-    secondaryWeaponId: "dagger"
+    secondaryWeaponId: "dagger",
+    phase: "magic"
   });
+  let target = { statuses: {} };
 
-  const listed = listMagicActions({ actor, state });
-  assert.equal(listed.map((action) => action.id).includes("spell"), true);
-
-  const magic = resolveMagicAction({
+  const first = resolveMagicAction({
     actor,
+    target,
     state,
-    actionId: "spell",
+    actionId: "spell-a",
+    rng: lowRoll
+  });
+  actor = first.actor;
+  target = first.target;
+  state = first.state;
+
+  const second = resolveMagicAction({
+    actor,
+    target,
+    state,
+    actionId: "spell-b",
+    rng: lowRoll
+  });
+  actor = second.actor;
+  target = second.target;
+  state = second.state;
+
+  const weapon = resolveWeaponAction({
+    actor,
+    target,
+    state,
+    actionId: "weapon-special",
     rng: lowRoll
   });
 
-  assert.equal(magic.actor.resources.mana.current, 90);
-  assert.equal(magic.target.statuses.Frost, 1);
-  assert.equal(magic.state.secondaryUsed, true);
+  assert.equal(weapon.actor.resources.mana.current, 70);
+  assert.equal(weapon.state.phase, "magic");
+  assert.equal(weapon.state.comboLog.length, 3);
+
+  const next = finishTurn(weapon.state);
+  assert.equal(next.turn, 2);
+  assert.equal(next.phase, "attack");
+  assert.deepEqual(next.usedTurn, []);
+  assert.deepEqual(next.comboLog, []);
+});
+
+test("once-turn actions are reusable after nextTurn", () => {
+  let actor = baseActor();
+  actor.abilities.push({
+    id: "once-turn-spell",
+    name: "Once turn spell",
+    frequency: "once_turn",
+    cost: { resource: "mana", amount: 10 },
+    mechanics: {
+      enabled: true,
+      timing: "magic_action",
+      magicActionEligible: true,
+      frequency: "once_turn"
+    }
+  });
+
+  let state = createCombatState({ phase: "magic" });
+  const first = resolveMagicAction({
+    actor,
+    state,
+    actionId: "once-turn-spell",
+    rng: lowRoll
+  });
 
   assert.throws(() =>
-    resolveWeaponAction({
-      actor: magic.actor,
-      state: magic.state,
-      actionId: "weapon-special",
+    resolveMagicAction({
+      actor: first.actor,
+      state: first.state,
+      actionId: "once-turn-spell",
       rng: lowRoll
     })
   );
+
+  state = nextTurn(first.state);
+  state.phase = "magic";
+
+  const second = resolveMagicAction({
+    actor: first.actor,
+    state,
+    actionId: "once-turn-spell",
+    rng: lowRoll
+  });
+
+  assert.equal(second.actor.resources.mana.current, 80);
+  assert.equal(second.state.usedTurn.includes("once-turn-spell"), true);
 });
 
 test("normal attack modifiers are not automatically listed as magic actions", () => {
