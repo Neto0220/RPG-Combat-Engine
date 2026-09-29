@@ -2,6 +2,22 @@
 
 Todas as mudanças relevantes do projeto serão documentadas aqui.
 
+## [0.6.0] - 2026-09-29
+
+### Adicionado
+
+- interpretador local de descrições de mecânicas, sem dependência de API externa;
+- base interna de aliases para atributos, recursos, timings e frequências;
+- interpretação de custos, ataques extras, geradores recursivos, multiplicadores de atributo, dano, reações, status, requisitos e duração;
+- merge seguro que preenche defaults sem sobrescrever configurações manuais;
+- API browser global `window.RPGMechanicsAI` para integração direta em aplicativos;
+- testes automáticos de linguagem natural e casos ambíguos.
+
+### Compatibilidade
+
+- a camada universal 0.5.x permanece compatível;
+- o interpretador é opcional e funciona como camada de assistência sobre os mesmos campos declarativos do engine.
+
 ## [0.5.0] - 2026-09-29
 
 ### Adicionado
