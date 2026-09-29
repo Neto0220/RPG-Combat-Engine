@@ -445,12 +445,61 @@ export function interpretMechanics(text, options = {}) {
   return result;
 }
 
+const MECHANIC_DEFAULTS = Object.freeze({
+  enabled: false,
+  timing: "on_use",
+  duration: "turn",
+  frequency: "unlimited",
+  extraAttacks: 0,
+  attackEvery: 0,
+  attackGrant: 0,
+  recursiveAttacks: true,
+  extraWeaponMode: "highest",
+  dualWield: false,
+  bonusDamageDice: "",
+  bonusDamageFlat: 0,
+  damageMultiplier: 1,
+  guaranteedAttacks: 0,
+  reactionAttacks: 0,
+  negateAttacks: 0,
+  defenseBonus: 0,
+  damageReduction: 0,
+  damageReductionDice: "",
+  attributeName: "",
+  attributeMode: "add",
+  attributeValue: 0,
+  attributeScope: "global",
+  conditionWeaponRole: "any",
+  requiredStatusName: "",
+  requiredStatusMin: 0,
+  statusName: "",
+  statusFixed: 0,
+  statusDie: "",
+  statusPerHit: true,
+  statusEvery: 0,
+  statusDamage: 0,
+  actionLabel: "",
+  conditionText: "",
+  effectText: "",
+  targetStatusName: "",
+  targetStatusFixed: 0,
+  targetStatusDie: "",
+  targetStatusMode: "add",
+  magicActionEligible: false,
+  magicActionLabel: ""
+});
+
 function emptyLike(value) {
   if (value == null || value === "") return true;
   if (value === false) return true;
-  if (typeof value === "number") return value === 0 || value === 1;
+  if (typeof value === "number") return value === 0;
   if (Array.isArray(value)) return value.length === 0;
   return false;
+}
+
+function mechanicIsDefault(key, value) {
+  if (!(key in MECHANIC_DEFAULTS)) return emptyLike(value);
+  return JSON.stringify(value) === JSON.stringify(MECHANIC_DEFAULTS[key]);
 }
 
 export function applyMechanicsSuggestion(entity = {}, suggestion, options = {}) {
@@ -461,11 +510,12 @@ export function applyMechanicsSuggestion(entity = {}, suggestion, options = {}) 
   next.mechanics = { ...existingMechanics };
 
   for (const [key, value] of Object.entries(suggestion.mechanics || {})) {
-    if (overwrite || emptyLike(existingMechanics[key])) next.mechanics[key] = structuredClone(value);
+    if (overwrite || mechanicIsDefault(key, existingMechanics[key])) next.mechanics[key] = structuredClone(value);
   }
 
   for (const [key, value] of Object.entries(suggestion.fields || {})) {
-    if (overwrite || emptyLike(next[key])) next[key] = structuredClone(value);
+    const canReplaceResourceDefault = key === "costResource" && (next.cost == null || number(next.cost) === 0);
+    if (overwrite || emptyLike(next[key]) || canReplaceResourceDefault) next[key] = structuredClone(value);
   }
 
   next.mechanicsInterpretation = {
@@ -481,5 +531,16 @@ export function explainMechanicsSuggestion(suggestion) {
   return suggestion.matches.map((match) => {
     const value = typeof match.value === "object" ? JSON.stringify(match.value) : String(match.value);
     return match.rule + ": " + value;
+  });
+}
+
+
+if (typeof window !== "undefined") {
+  window.RPGMechanicsAI = Object.freeze({
+    version: MECHANICS_KB_VERSION,
+    knowledgeBase: MECHANICS_KB,
+    interpretMechanics,
+    applyMechanicsSuggestion,
+    explainMechanicsSuggestion
   });
 }
