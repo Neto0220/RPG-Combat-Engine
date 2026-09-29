@@ -35,3 +35,60 @@ export {
   resolveMagicAction,
   finishTurn
 } from "./engine.js";
+
+
+export {
+  DEFAULT_RULE_PROFILE,
+  deepMerge,
+  createRulesProfile,
+  getPath,
+  setPath,
+  number,
+  actorValue,
+  modifierMatches,
+  collectContextModifiers
+} from "./rules.js";
+
+export {
+  resolveCheck,
+  resolveOpposedCheck,
+  resolveInitiative
+} from "./checks.js";
+
+export {
+  createTurnState,
+  actionPenalty,
+  canTakeAction,
+  takeAction,
+  advancePhase,
+  nextRound,
+  nextTurn as nextUniversalTurn
+} from "./turns.js";
+
+export {
+  resolveHitLocation,
+  combineArmorLayers,
+  resolveDamage,
+  tickTimedEffects
+} from "./damage.js";
+
+export {
+  canPayCosts,
+  payCosts,
+  resetCounters
+} from "./resources.js";
+
+export {
+  collectFeatures,
+  featureActiveAtLevel,
+  activeFeatures,
+  evaluateRequirements,
+  progressionRow,
+  deriveProgression
+} from "./progression.js";
+
+export {
+  fireModePreview,
+  consumeAmmo,
+  resolveReliability
+} from "./firearms.js";
