@@ -1,5 +1,8 @@
 # RPG Combat Engine
 
+[![Tests](https://github.com/Neto0220/RPG-Combat-Engine/actions/workflows/test.yml/badge.svg)](https://github.com/Neto0220/RPG-Combat-Engine/actions/workflows/test.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 Motor de combate open source e independente para fichas de RPG, com foco em regras declarativas, sequências de ataque e extensibilidade.
 
 > Este repositório contém apenas o motor genérico. Ele não contém fichas, personagens, saves ou dados privados do aplicativo que originou o projeto.
@@ -172,3 +175,12 @@ Não envie saves reais, fichas pessoais ou dados privados em Issues públicas. U
 ## Licença
 
 MIT — consulte [LICENSE](LICENSE).
+
+## Participar do projeto
+
+- [Abrir um bug](https://github.com/Neto0220/RPG-Combat-Engine/issues/new?template=bug_report.yml)
+- [Sugerir uma melhoria](https://github.com/Neto0220/RPG-Combat-Engine/issues/new?template=feature_request.yml)
+- [Propor uma nova mecânica](https://github.com/Neto0220/RPG-Combat-Engine/issues/new?template=mechanic_proposal.yml)
+- [Ver o roadmap e ideias da comunidade](https://github.com/Neto0220/RPG-Combat-Engine/issues/1)
+
+O mantenedor do código é `@Neto0220`. Pull Requests são revisados antes de serem incorporados ao motor.
