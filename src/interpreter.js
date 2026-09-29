@@ -19,7 +19,8 @@ export const MECHANICS_KB = Object.freeze({
     { id: "reaction", aliases: ["reacao", "reação", "reaction", "quando for atacado", "ao ser atacado", "ao sofrer dano"] },
     { id: "start_turn", aliases: ["inicio do turno", "início do turno", "no começo do turno", "start of turn"] },
     { id: "magic_action", aliases: ["magia", "feitico", "feitiço", "spell", "acao magica", "ação mágica", "tecnica magica", "técnica mágica"] },
-    { id: "passive", aliases: ["passiva", "passivo", "sempre ativo", "sempre ativa", "enquanto equipado", "while equipped"] }
+    { id: "passive", aliases: ["passiva", "passivo", "sempre ativo", "sempre ativa", "enquanto equipado", "while equipped"] },
+    { id: "on_use", aliases: ["ataque", "habilidade de ataque", "acao de ataque", "ação de ataque", "modificador de ataque", "ativa no ataque", "usar no ataque"] }
   ],
   frequencies: [
     { id: "once_turn", aliases: ["1x por turno", "1 vez por turno", "uma vez por turno", "once per turn"] },
@@ -80,7 +81,7 @@ function contextDefaults(context) {
       statusPerHit: false
     };
   }
-  if (["item", "equipment", "class", "subclass", "race", "passive"].includes(c)) {
+  if (["item", "weapon", "equipment", "class", "subclass", "race", "passive"].includes(c)) {
     return {
       enabled: true,
       timing: "passive",
@@ -112,14 +113,19 @@ function detectAlias(text, table) {
   return best;
 }
 
+function normalizeDieExpression(expression) {
+  const compact = String(expression || "").replace(/\s+/g, "").toLowerCase();
+  return compact.startsWith("d") ? "1" + compact : compact;
+}
+
 function findDice(text) {
-  return [...String(text || "").matchAll(/\b(\d+d\d+(?:\s*[+-]\s*\d+)?)\b/gi)]
-    .map((match) => match[1].replace(/\s+/g, ""));
+  return [...String(text || "").matchAll(/\b((?:\d+)?d\d+(?:\s*[+-]\s*\d+)?)\b/gi)]
+    .map((match) => normalizeDieExpression(match[1]));
 }
 
 
 const CREATION_LABELS = Object.freeze({
-  name: ["nome", "nome da habilidade", "nome da arma", "nome do item", "nome da classe", "nome da subclasse", "habilidade", "arma", "item", "classe", "subclasse"],
+  name: ["nome", "nome da habilidade", "nome da habilidade do item", "nome da habilidade da arma", "nome da passiva", "nome da arma", "nome do item", "nome da classe", "nome da subclasse", "habilidade", "arma", "item", "classe", "subclasse"],
   description: ["descricao", "descrição", "efeito", "o que faz", "como funciona"],
   damage: ["dano", "damage"],
   manaCost: ["custo de mana", "mana", "custo mana"],
@@ -148,7 +154,7 @@ function labelKey(label) {
 
 function splitCreationFields(text) {
   const raw = String(text || "").replace(/\r/g, "");
-  const matches = [...raw.matchAll(/(?:^|[\n;])\s*([^:\n;]{1,40})\s*:\s*/g)];
+  const matches = [...raw.matchAll(/(?:^|[\n;,])\s*([^:\n;,]{1,40})\s*:\s*/g)];
   const out = {};
   if (!matches.length) return out;
   for (let index = 0; index < matches.length; index += 1) {
@@ -166,7 +172,7 @@ function splitCreationFields(text) {
 function inferEntityName(text, context) {
   const raw = String(text || "");
   const patterns = [
-    /\b(?:nome\s+(?:da|do)\s+(?:habilidade|arma|item|classe|subclasse)|nome)\s*(?:é|eh|:|-)\s*["“]?([^,.;\n"”]{2,80})/i,
+    /\b(?:nome\s+(?:da|do)\s+(?:habilidade(?:\s+(?:do\s+item|da\s+arma))?|passiva|arma|item|classe|subclasse)|nome)\s*(?:é|eh|:|-|,)\s*["“]?([^,.;\n"”]{2,80})/i,
     /\b(?:a\s+)?habilidade\s+(?:se\s+chama|chama-se|é|eh)\s+["“]?([^,.;\n"”]{2,80})/i,
     /\b(?:a\s+)?arma\s+(?:se\s+chama|chama-se|é|eh)\s+["“]?([^,.;\n"”]{2,80})/i,
     /\b(?:o\s+)?item\s+(?:se\s+chama|chama-se|é|eh)\s+["“]?([^,.;\n"”]{2,80})/i,
@@ -289,6 +295,14 @@ export function interpretMechanics(text, options = {}) {
     pushMatch(result, "defense_cost", result.fields.defenseCost, 0.995, "Custo de defesa: " + creationFields.defenseCost);
   }
 
+  const directManaCost = raw.match(/\b(?:custo\s+de\s+mana|custo\s+mana)\s*[:=,-]?\s*(\d+(?:[.,]\d+)?)/i);
+  if (directManaCost) {
+    result.fields.cost = number(directManaCost[1]);
+    result.fields.costResource = "mana";
+    result.explicitFields.push("cost", "costResource");
+    pushMatch(result, "cost", { resource: "mana", amount: result.fields.cost }, 0.99, directManaCost[0]);
+  }
+
   const costRegex = /\b(?:custa|gasta|consome|usar custa|costs?)\s*(\d+(?:[.,]\d+)?)\s*(mana|mp|vida|pv|hp|life|defesa|def|defense|stamina|vigor|energia|energy)\b/gi;
   for (const match of mechanicsRaw.matchAll(costRegex)) {
     const amount = number(match[1]);
@@ -301,17 +315,21 @@ export function interpretMechanics(text, options = {}) {
     pushMatch(result, "cost", { resource, amount }, 0.99, match[0]);
   }
 
-  if (creationFields.use) {
-    const f = detectAlias(creationFields.use, MECHANICS_KB.frequencies);
+  const directUse = raw.match(/\b(?:uso|frequencia|frequência|limite)\s*[:=,-]\s*([^.;\n]+)/i);
+  const useText = creationFields.use || (directUse ? directUse[1].trim() : "");
+  if (useText) {
+    const f = detectAlias(useText, MECHANICS_KB.frequencies);
     if (f) {
       result.mechanics.frequency = f.id;
       result.explicitFields.push("mechanics.frequency");
-      pushMatch(result, "frequency", f.id, 0.995, creationFields.use);
+      pushMatch(result, "frequency", f.id, 0.995, useText);
     }
   }
 
-  if (creationFields.type) {
-    const t = detectAlias(creationFields.type, MECHANICS_KB.timings);
+  const directType = raw.match(/\b(?:tipo|categoria)\s*[:=,-]\s*([^.;\n]+)/i);
+  const typeText = creationFields.type || (directType ? directType[1].trim() : "");
+  if (typeText) {
+    const t = detectAlias(typeText, MECHANICS_KB.timings);
     if (t) {
       result.mechanics.timing = t.id;
       result.explicitFields.push("mechanics.timing");
@@ -320,7 +338,7 @@ export function interpretMechanics(text, options = {}) {
         result.mechanics.duration = "instant";
         result.mechanics.statusPerHit = false;
       }
-      pushMatch(result, "timing", t.id, 0.995, creationFields.type);
+      pushMatch(result, "timing", t.id, 0.995, typeText);
     }
   }
 
@@ -497,12 +515,14 @@ export function interpretMechanics(text, options = {}) {
     pushMatch(result, "status_threshold_damage", { name: result.mechanics.statusName, every: result.mechanics.statusEvery, damage: result.mechanics.statusDamage }, 0.96, statusEvery[0]);
   }
 
-  if (creationFields.damage) {
-    const structuredDice = findDice(creationFields.damage);
+  const directDamage = raw.match(/\b(?:dano|damage)\s*[:=,-]\s*((?:\d+)?d\d+(?:\s*[+-]\s*\d+)?)/i);
+  const damageText = creationFields.damage || (directDamage ? directDamage[1] : "");
+  if (damageText) {
+    const structuredDice = findDice(damageText);
     if (structuredDice.length) {
       result.fields.dice = structuredDice.map((expression) => ({ expression, label: "Dano" }));
       result.explicitFields.push("dice");
-      pushMatch(result, "damage_dice", structuredDice[0], 0.995, creationFields.damage);
+      pushMatch(result, "damage_dice", structuredDice[0], 0.995, damageText);
       if (result.mechanics.timing === "on_use" && context === "ability") {
         result.mechanics.timing = "magic_action";
         result.mechanics.magicActionEligible = true;
@@ -513,8 +533,8 @@ export function interpretMechanics(text, options = {}) {
   }
 
   const dice = findDice(mechanicsRaw);
-  const damageDiceMatches = [...mechanicsRaw.matchAll(/\b(\d+d\d+(?:\s*[+-]\s*\d+)?)\s*(?:de\s*)?(?:dano|damage)\b/gi)]
-    .map((match) => match[1].replace(/\s+/g, ""));
+  const damageDiceMatches = [...mechanicsRaw.matchAll(/\b((?:\d+)?d\d+(?:\s*[+-]\s*\d+)?)\s*(?:de\s*)?(?:dano|damage)\b/gi)]
+    .map((match) => normalizeDieExpression(match[1]));
 
   if (damageDiceMatches.length) {
     const expression = damageDiceMatches[0];
