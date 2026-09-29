@@ -82,12 +82,14 @@ if (ability.name === "Nome da habilidade") {
 O aplicativo privado que originou o motor segue este mesmo princípio: código genérico e dados locais por instalação.
 
 
-## Duas ações por turno
+## Ataque seguido de fase de combo
 
-Aplicações podem usar o campo `state.secondaryUsed` para modelar um turno com:
+Aplicações podem modelar o turno em duas fases:
 
-1. uma sequência de ataque normal;
-2. uma segunda ação, compartilhada entre magia/técnica e ação especial de arma.
+1. `phase: "attack"`: sequência normal de ataques;
+2. `phase: "magic"`: janela de combo para magias, técnicas e ações especiais de arma.
+
+A fase de combo não é consumida pela primeira ação. Ela continua aberta e aceita várias ações enquanto os recursos e a frequência de cada habilidade permitirem. `finishTurn()` (ou `nextTurn()`) encerra o turno, limpa `usedTurn` e `comboLog` e retorna para `phase: "attack"`.
 
 Use `listMagicActions()` para listar habilidades elegíveis e `resolveMagicAction()` para executá-las. Uma ação pode ser exposta como magia com:
 
@@ -100,6 +102,6 @@ mechanics: {
 }
 ```
 
-`resolveMagicAction()` e `resolveWeaponAction()` marcam `secondaryUsed = true`. Depois disso, outra ação secundária no mesmo turno é rejeitada. `nextTurn()` libera o slot novamente.
+`resolveMagicAction()` e `resolveWeaponAction()` acrescentam uma entrada em `comboLog` e mantêm a fase de combo aberta. Restrições como `once_turn` e `once_combat` continuam sendo respeitadas individualmente. `finishTurn()` encerra a janela e prepara o próximo turno.
 
 Habilidades que modificam diretamente a sequência normal de ataque, como geração de ataques extras, permanecem fora da lista de magia mesmo que sejam marcadas como elegíveis.
