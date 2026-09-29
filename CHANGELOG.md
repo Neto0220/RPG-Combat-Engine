@@ -2,6 +2,21 @@
 
 Todas as mudanças relevantes do projeto serão documentadas aqui.
 
+## [0.4.0] - 2026-09-29
+
+### Adicionado
+
+- fase genérica de combo após a sequência normal de ataque;
+- múltiplas magias, técnicas e ações de arma no mesmo combo;
+- `comboLog` para registrar cada ação e recurso gasto;
+- `finishTurn()` para encerrar explicitamente o turno;
+- reinicialização de usos `once_turn` ao avançar o turno.
+
+### Alterado
+
+- o segundo estágio do turno não é mais bloqueado globalmente após a primeira ação;
+- limites de uso passam a ser controlados pela frequência da própria habilidade e pelos recursos disponíveis.
+
 ## [0.3.0] - 2026-09-29
 
 ### Adicionado
