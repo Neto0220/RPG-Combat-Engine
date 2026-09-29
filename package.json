@@ -1,0 +1,26 @@
+{
+  "name": "@neto0220/rpg-combat-engine",
+  "version": "0.1.0",
+  "description": "Motor de combate declarativo e extensível para fichas e aplicativos de RPG.",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "test": "node --test",
+    "example": "node examples/basic-combat.mjs"
+  },
+  "keywords": [
+    "rpg",
+    "combat",
+    "engine",
+    "dice",
+    "tabletop",
+    "ttrpg"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  }
+}
