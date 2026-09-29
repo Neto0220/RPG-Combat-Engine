@@ -148,7 +148,7 @@ function labelKey(label) {
 
 function splitCreationFields(text) {
   const raw = String(text || "").replace(/\r/g, "");
-  const matches = [...mechanicsRaw.matchAll(/(?:^|[\n;])\s*([^:\n;]{1,40})\s*:\s*/g)];
+  const matches = [...raw.matchAll(/(?:^|[\n;])\s*([^:\n;]{1,40})\s*:\s*/g)];
   const out = {};
   if (!matches.length) return out;
   for (let index = 0; index < matches.length; index += 1) {
@@ -174,7 +174,7 @@ function inferEntityName(text, context) {
     /\b(?:a\s+)?subclasse\s+(?:se\s+chama|chama-se|é|eh)\s+["“]?([^,.;\n"”]{2,80})/i
   ];
   for (const pattern of patterns) {
-    const match = mechanicsRaw.match(pattern);
+    const match = raw.match(pattern);
     if (match) return match[1].trim();
   }
   return null;
