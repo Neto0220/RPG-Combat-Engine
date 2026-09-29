@@ -2,6 +2,28 @@
 
 Todas as mudanças relevantes do projeto serão documentadas aqui.
 
+## [0.5.0] - 2026-09-29
+
+### Adicionado
+
+- perfis de regras declarativos independentes de sistema;
+- testes roll-over, roll-under, percentuais, opostos e dados explosivos;
+- iniciativa configurável por dado, atributo, perícia e bônus especiais;
+- economia de ações por fases, slots e penalidade cumulativa;
+- frequência por turno, rodada e combate;
+- pipeline genérico de dano com localização, armadura por local, camadas, penetração, redução e trilha de ferimentos;
+- efeitos recorrentes e regressivos;
+- custos arbitrários para mana, vida, slots, preparo, cargas e contadores;
+- progressão genérica para raça, ancestralidade, classe, subclasse, papel, background, cyberware e traits;
+- modos declarativos de armas de fogo, munição e confiabilidade;
+- documentação de cobertura e integração universal;
+- testes de regressão cobrindo arquiteturas de RPG incompatíveis entre si.
+
+### Compatibilidade
+
+- a API de combate existente da 0.4.x continua exportada;
+- a nova camada é adicional e pode ser adotada gradualmente.
+
 ## [0.4.0] - 2026-09-29
 
 ### Adicionado
