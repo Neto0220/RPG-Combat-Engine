@@ -116,3 +116,50 @@ test("ambiguous prose does not invent mechanics", () => {
   assert.equal(suggestion.mechanics.enabled, false);
   assert.ok(suggestion.warnings.length > 0);
 });
+
+
+test("structured creation prompt fills name description damage cost and use", () => {
+  const suggestion = interpretMechanics(
+    "Nome da habilidade: Ruptura Espacial\nDescrição: Dá um soco no ar, manipula o espaço e racha a área.\nDano: 1d12\nCusto de mana: 5\nUso: uma vez por turno",
+    { context: "ability" }
+  );
+
+  assert.equal(suggestion.fields.name, "Ruptura Espacial");
+  assert.equal(suggestion.fields.description, "Dá um soco no ar, manipula o espaço e racha a área.");
+  assert.equal(suggestion.fields.dice[0].expression, "1d12");
+  assert.equal(suggestion.fields.cost, 5);
+  assert.equal(suggestion.fields.costResource, "mana");
+  assert.equal(suggestion.mechanics.frequency, "once_turn");
+  assert.equal(suggestion.mechanics.timing, "magic_action");
+  assert.equal(suggestion.structured, true);
+  assert.ok(suggestion.explicitFields.includes("name"));
+});
+
+test("explicit structured name replaces an existing entity name safely", () => {
+  const suggestion = interpretMechanics(
+    "Nome da arma: Lâmina do Vazio\nDescrição: Uma espada que causa 2d6 de dano.\nUso: sem limite",
+    { context: "item" }
+  );
+
+  const existing = {
+    name: "Espada Antiga",
+    description: "texto antigo",
+    mechanics: { enabled: true, frequency: "once_combat" }
+  };
+
+  const merged = applyMechanicsSuggestion(existing, suggestion);
+  assert.equal(merged.name, "Lâmina do Vazio");
+  assert.equal(merged.description, "Uma espada que causa 2d6 de dano.");
+  assert.equal(merged.mechanics.frequency, "unlimited");
+});
+
+test("free speech can infer an explicit ability name", () => {
+  const suggestion = interpretMechanics(
+    "A habilidade se chama Punho Dimensional, custa 5 mana, dá 1d12 de dano e pode ser usada uma vez por turno.",
+    { context: "ability" }
+  );
+
+  assert.equal(suggestion.fields.name, "Punho Dimensional");
+  assert.equal(suggestion.fields.cost, 5);
+  assert.equal(suggestion.mechanics.frequency, "once_turn");
+});
