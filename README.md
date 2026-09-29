@@ -166,7 +166,7 @@ Ideias, correções e novas mecânicas são bem-vindas.
 - Para uma nova regra, descreva também um exemplo de entrada e o resultado esperado.
 - Pull Requests devem incluir testes quando alterarem comportamento do motor.
 
-Leia [CONTRIBUTING.md](CONTRIBUTING.md).
+Leia [CONTRIBUTING.md](CONTRIBUTING.md). Para integrar o motor a uma ficha ou aplicativo, consulte [docs/APP_INTEGRATION.md](docs/APP_INTEGRATION.md).
 
 ## Segurança e privacidade
 
