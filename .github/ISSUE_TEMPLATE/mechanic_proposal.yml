@@ -1,0 +1,33 @@
+name: Nova mecânica
+description: Proponha uma nova regra de combate declarativa.
+title: "[Mecânica] "
+labels: []
+body:
+  - type: textarea
+    id: rule
+    attributes:
+      label: Regra
+      description: Explique a mecânica sem depender de nomes específicos de personagens ou campanhas.
+    validations:
+      required: true
+
+  - type: textarea
+    id: input
+    attributes:
+      label: Exemplo de entrada
+      render: javascript
+    validations:
+      required: true
+
+  - type: textarea
+    id: output
+    attributes:
+      label: Resultado esperado
+    validations:
+      required: true
+
+  - type: textarea
+    id: edge
+    attributes:
+      label: Casos-limite
+      description: O que deve acontecer com múltiplos efeitos, recursos insuficientes, recursão, etc.?
