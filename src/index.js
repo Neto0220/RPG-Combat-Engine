@@ -30,5 +30,7 @@ export {
   resolveAttackSequence,
   nextTurn,
   listWeaponActions,
-  resolveWeaponAction
+  resolveWeaponAction,
+  listMagicActions,
+  resolveMagicAction
 } from "./engine.js";

@@ -28,7 +28,8 @@ export function createCombatState(options = {}) {
     secondaryWeaponId: options.secondaryWeaponId || null,
     activeAbilityIds: [...(options.activeAbilityIds || [])],
     usedTurn: [...(options.usedTurn || [])],
-    usedCombat: [...(options.usedCombat || [])]
+    usedCombat: [...(options.usedCombat || [])],
+    secondaryUsed: Boolean(options.secondaryUsed)
   };
 }
 
@@ -269,8 +270,55 @@ export function nextTurn(state) {
     ...clone(state),
     turn: number(state.turn, 1) + 1,
     activeAbilityIds: [],
-    usedTurn: []
+    usedTurn: [],
+    secondaryUsed: false
   };
+}
+
+function groupedAbilities(actor = {}) {
+  const out = [];
+  if (Array.isArray(actor.abilities)) {
+    for (const ability of actor.abilities) out.push({ ...ability, source: ability.source || "Ability" });
+  } else {
+    for (const [key, label] of [["race", "Race"], ["class", "Class"], ["subclass", "Subclass"]]) {
+      for (const ability of actor.abilities?.[key] || []) {
+        out.push({ ...ability, source: ability.source || label });
+      }
+    }
+  }
+  for (const passive of actor.passives || []) {
+    out.push({ ...passive, source: passive.sourceLabel || "Passive" });
+  }
+  return out;
+}
+
+function isNormalAttackModifier(entity = {}) {
+  const mechanics = entity.mechanics || {};
+  const timing = entity.timing || mechanics.timing || "";
+  if (timing !== "on_use") return false;
+  return Boolean(
+    number(mechanics.extraAttacks) > 0 ||
+    number(mechanics.attackEvery) > 0 ||
+    number(mechanics.attackGrant) > 0 ||
+    mechanics.dualWield ||
+    mechanics.bonusDamageDice ||
+    number(mechanics.bonusDamageFlat) !== 0 ||
+    number(mechanics.damageMultiplier, 1) !== 1 ||
+    mechanics.attributeName ||
+    (mechanics.conditionWeaponRole && mechanics.conditionWeaponRole !== "any") ||
+    mechanics.requiredStatusName
+  );
+}
+
+export function listMagicActions({ actor }) {
+  return groupedAbilities(actor).filter((ability) => {
+    const mechanics = ability.mechanics || {};
+    const timing = ability.timing || mechanics.timing || "";
+    const eligible =
+      mechanics.magicActionEligible === true ||
+      timing === "magic_action";
+    return eligible && !isNormalAttackModifier(ability);
+  });
 }
 
 export function listWeaponActions({ actor, state }) {
@@ -309,6 +357,10 @@ export function resolveWeaponAction({
     throw new Error(`Weapon action not found: ${actionId}`);
   }
 
+  if (state.secondaryUsed) {
+    throw new Error("Secondary action already used");
+  }
+
   if (!canUseByFrequency(action, state)) {
     throw new Error(`Weapon action unavailable by frequency: ${action.id}`);
   }
@@ -332,6 +384,7 @@ export function resolveWeaponAction({
   const spending = spendResource(actorAfter, cost);
   actorAfter = spending.actor;
   stateAfter = markUsed(stateAfter, action);
+  stateAfter.secondaryUsed = true;
 
   const weapon = (actorAfter.weapons || []).find(
     (candidate) => String(candidate.id) === String(action.weaponId)
@@ -410,5 +463,132 @@ export function resolveWeaponAction({
     appliedStatus,
     spent: { [cost.resource]: spending.spent },
     damage
+  };
+}
+
+
+export function resolveMagicAction({
+  actor,
+  target = { statuses: {} },
+  state,
+  actionId,
+  confirmCondition = false,
+  rng = Math.random
+}) {
+  const action = listMagicActions({ actor, state }).find(
+    (candidate) => String(candidate.id) === String(actionId)
+  );
+
+  if (!action) {
+    throw new Error(`Magic action not found: ${actionId}`);
+  }
+
+  if (state.secondaryUsed) {
+    throw new Error("Secondary action already used");
+  }
+
+  if (!canUseByFrequency(action, state)) {
+    throw new Error(`Magic action unavailable by frequency: ${action.id}`);
+  }
+
+  const mechanics = action.mechanics || {};
+  const condition = action.condition || mechanics.conditionText || "";
+
+  if (condition && !confirmCondition) {
+    return {
+      requiresConfirmation: true,
+      condition,
+      action
+    };
+  }
+
+  let actorAfter = clone(actor);
+  let targetAfter = clone(target);
+  let stateAfter = clone(state);
+
+  const cost = costOf(action);
+  const spending = spendResource(actorAfter, cost);
+  actorAfter = spending.actor;
+  stateAfter = markUsed(stateAfter, action);
+  stateAfter.secondaryUsed = true;
+
+  let total = 0;
+  const dice = [];
+  const statusFromDice = [];
+
+  for (const entry of action.dice || action.damageDice || []) {
+    const expression = entry?.expression || entry;
+    const label = String(entry?.label || "Result");
+    const result = rollDice(expression, rng);
+    dice.push({ label, ...result });
+
+    const match = label.match(/^\s*(?:stack|status)\s+(.+)$/i);
+    if (match) {
+      statusFromDice.push({ name: match[1].trim(), amount: result.total });
+    } else {
+      total += result.total;
+    }
+  }
+
+  const attributes = [];
+  for (const attribute of action.attributeDamage || action.damageAttributes || []) {
+    const result = calculateAttribute({
+      actor: actorAfter,
+      attribute,
+      weapon: null,
+      effects: getActiveEffects({ actor: actorAfter, state: stateAfter })
+    });
+    attributes.push(result);
+    total += result.total;
+  }
+
+  const appliedStatuses = [];
+  const configuredStatus = {
+    name: mechanics.targetStatusName || mechanics.statusName || "",
+    fixed: mechanics.targetStatusFixed ?? mechanics.statusFixed ?? 0,
+    die: mechanics.targetStatusDie || mechanics.statusDie || "",
+    mode: mechanics.targetStatusMode || "add"
+  };
+
+  if (configuredStatus.name) {
+    const amount =
+      number(configuredStatus.fixed) +
+      (configuredStatus.die ? rollDice(configuredStatus.die, rng).total : 0);
+
+    if (amount !== 0) {
+      const current = number(targetAfter?.statuses?.[configuredStatus.name]);
+      if (configuredStatus.mode === "max") {
+        targetAfter = clone(targetAfter || {});
+        targetAfter.statuses = { ...(targetAfter.statuses || {}) };
+        targetAfter.statuses[configuredStatus.name] = Math.max(current, amount);
+      } else {
+        targetAfter = applyStatus(targetAfter, configuredStatus.name, amount);
+      }
+      appliedStatuses.push({ name: configuredStatus.name, amount });
+    }
+  } else {
+    for (const status of statusFromDice) {
+      if (!status.name || !status.amount) continue;
+      targetAfter = applyStatus(targetAfter, status.name, status.amount);
+      appliedStatuses.push(status);
+    }
+  }
+
+  return {
+    requiresConfirmation: false,
+    actor: actorAfter,
+    target: targetAfter,
+    state: stateAfter,
+    action,
+    metadata: {
+      label: mechanics.magicActionLabel || mechanics.actionLabel || action.source || "Magic action",
+      condition,
+      effect: mechanics.effectText || ""
+    },
+    dice,
+    attributes,
+    appliedStatuses,
+    spent: { [cost.resource]: spending.spent },
+    total
   };
 }

@@ -80,3 +80,26 @@ if (ability.name === "Nome da habilidade") {
 ## Projeto de referência
 
 O aplicativo privado que originou o motor segue este mesmo princípio: código genérico e dados locais por instalação.
+
+
+## Duas ações por turno
+
+Aplicações podem usar o campo `state.secondaryUsed` para modelar um turno com:
+
+1. uma sequência de ataque normal;
+2. uma segunda ação, compartilhada entre magia/técnica e ação especial de arma.
+
+Use `listMagicActions()` para listar habilidades elegíveis e `resolveMagicAction()` para executá-las. Uma ação pode ser exposta como magia com:
+
+```js
+mechanics: {
+  enabled: true,
+  timing: "magic_action",
+  magicActionEligible: true,
+  magicActionLabel: "Magia"
+}
+```
+
+`resolveMagicAction()` e `resolveWeaponAction()` marcam `secondaryUsed = true`. Depois disso, outra ação secundária no mesmo turno é rejeitada. `nextTurn()` libera o slot novamente.
+
+Habilidades que modificam diretamente a sequência normal de ataque, como geração de ataques extras, permanecem fora da lista de magia mesmo que sejam marcadas como elegíveis.

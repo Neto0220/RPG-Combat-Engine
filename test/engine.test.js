@@ -6,6 +6,8 @@ import {
   buildAttackSequence,
   resolveAttackSequence,
   resolveWeaponAction,
+  listMagicActions,
+  resolveMagicAction,
   nextTurn
 } from "../src/index.js";
 
@@ -187,6 +189,7 @@ test("weapon actions are resolved separately from the normal attack sequence", (
   assert.equal(result.damage, 5);
   assert.equal(result.actor.resources.mana.current, 80);
   assert.equal(result.state.usedCombat.includes("finisher"), true);
+  assert.equal(result.state.secondaryUsed, true);
 
   assert.throws(() =>
     resolveWeaponAction({
@@ -213,6 +216,7 @@ test("nextTurn clears optional selections and once-turn usage", () => {
   assert.deepEqual(next.activeAbilityIds, []);
   assert.deepEqual(next.usedTurn, []);
   assert.deepEqual(next.usedCombat, ["b"]);
+  assert.equal(next.secondaryUsed, false);
 });
 
 
@@ -271,4 +275,76 @@ test("app-shaped weapon abilities use generic mechanics metadata", () => {
   assert.equal(result.target.statuses.Marked, 1);
   assert.equal(result.metadata.label, "Special action");
   assert.equal(result.state.usedTurn.includes("special"), true);
+});
+
+
+test("magic and weapon actions share the same second-action slot", () => {
+  const actor = baseActor();
+  actor.abilities.push({
+    id: "spell",
+    name: "Spell",
+    cost: { resource: "mana", amount: 10 },
+    dice: [{ expression: "+1", label: "Stack Frost" }],
+    mechanics: {
+      enabled: true,
+      timing: "magic_action",
+      magicActionEligible: true
+    }
+  });
+  actor.weapons[0].actions = [
+    {
+      id: "weapon-special",
+      name: "Weapon special",
+      timing: "weapon_action",
+      cost: { resource: "mana", amount: 5 },
+      damageDice: ["1d6"]
+    }
+  ];
+
+  const state = createCombatState({
+    primaryWeaponId: "sword",
+    secondaryWeaponId: "dagger"
+  });
+
+  const listed = listMagicActions({ actor, state });
+  assert.equal(listed.map((action) => action.id).includes("spell"), true);
+
+  const magic = resolveMagicAction({
+    actor,
+    state,
+    actionId: "spell",
+    rng: lowRoll
+  });
+
+  assert.equal(magic.actor.resources.mana.current, 90);
+  assert.equal(magic.target.statuses.Frost, 1);
+  assert.equal(magic.state.secondaryUsed, true);
+
+  assert.throws(() =>
+    resolveWeaponAction({
+      actor: magic.actor,
+      state: magic.state,
+      actionId: "weapon-special",
+      rng: lowRoll
+    })
+  );
+});
+
+test("normal attack modifiers are not automatically listed as magic actions", () => {
+  const actor = baseActor();
+  actor.abilities.push({
+    id: "attack-modifier",
+    name: "Attack modifier",
+    cost: { resource: "mana", amount: 5 },
+    mechanics: {
+      enabled: true,
+      timing: "on_use",
+      magicActionEligible: true,
+      attackEvery: 2,
+      attackGrant: 1
+    }
+  });
+
+  const state = createCombatState();
+  assert.equal(listMagicActions({ actor, state }).length, 0);
 });

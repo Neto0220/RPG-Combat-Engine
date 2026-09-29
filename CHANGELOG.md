@@ -2,6 +2,17 @@
 
 Todas as mudanças relevantes do projeto serão documentadas aqui.
 
+## [0.3.0] - 2026-09-29
+
+### Adicionado
+
+- segunda ação genérica por turno;
+- ações de magia/técnica separadas do ataque normal;
+- compartilhamento do segundo slot entre magia e ação especial de arma;
+- controle de `secondaryUsed` reiniciado por `nextTurn`;
+- aplicação genérica de stacks/status em ações mágicas;
+- testes do orçamento de duas ações.
+
 ## [0.2.0] - 2026-09-29
 
 ### Adicionado
