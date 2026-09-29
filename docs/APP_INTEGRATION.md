@@ -105,3 +105,42 @@ mechanics: {
 `resolveMagicAction()` e `resolveWeaponAction()` acrescentam uma entrada em `comboLog` e mantêm a fase de combo aberta. Restrições como `once_turn` e `once_combat` continuam sendo respeitadas individualmente. `finishTurn()` encerra a janela e prepara o próximo turno.
 
 Habilidades que modificam diretamente a sequência normal de ataque, como geração de ataques extras, permanecem fora da lista de magia mesmo que sejam marcadas como elegíveis.
+
+
+## Perfil de sistema
+
+Aplicações que desejam suportar mais de um RPG devem manter o conteúdo da ficha separado do perfil de regras.
+
+Estrutura recomendada:
+
+~~~js
+{
+  system: {
+    id: "meu-sistema",
+    version: 1,
+    rulesProfile: { /* regras declarativas */ }
+  },
+  character: { /* dados do personagem */ }
+}
+~~~
+
+O aplicativo pode trocar o perfil sem alterar o código do motor. O perfil descreve checks, iniciativa, economia de ações, dano, progressão, recursos e armas de fogo.
+
+Os dados do personagem continuam livres para usar nomes e estruturas próprias. O motor acessa valores por caminhos e fontes de features configuráveis.
+
+### Princípio de compatibilidade
+
+Não salve regras particulares de um personagem dentro do código do engine. Habilidades, armas, classes, raças, papéis, implantes e passivas devem ser dados.
+
+Ao importar uma ficha de outro sistema:
+
+1. carregue o rulesProfile correspondente;
+2. normalize os caminhos necessários ou configure os caminhos no perfil;
+3. mantenha identificadores e conteúdo do personagem na própria ficha;
+4. use as primitives universais para resolver os testes e efeitos.
+
+### Interfaces
+
+Uma interface não precisa expor todos os campos universais ao mesmo tempo. Ela pode renderizar apenas as seções habilitadas pelo perfil. Por exemplo, um sistema sem armas de fogo não precisa exibir cadência ou munição; um sistema sem classes pode omitir progressão por classe; um sistema com ferimentos localizados pode habilitar o mapa de armadura por localização.
+
+Isso permite que um mesmo aplicativo se adapte ao sistema em uso sem transformar o engine em uma interface fixa.
