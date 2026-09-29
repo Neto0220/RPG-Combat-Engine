@@ -2,6 +2,24 @@
 
 Todas as mudanças relevantes do projeto serão documentadas aqui.
 
+## [0.7.0] - 2026-09-29
+
+### Adicionado
+
+- criação assistida por parâmetros nomeados e texto livre;
+- interpretação de nome da habilidade, arma, item, classe e subclasse;
+- campos estruturados de descrição, dano, custo, uso, requisito, duração, status e atributo;
+- suporte a dados abreviados como `D12` = `1d12`;
+- instruções explícitas de nome/descrição substituem esses campos no cadastro;
+- suporte a prompts em várias linhas ou em uma única linha;
+- tipos explícitos como magia, ataque, passiva e reação.
+
+### Compatibilidade
+
+- descrições livres continuam aceitas;
+- configurações manuais de mecânica continuam protegidas;
+- apenas campos explicitamente nomeados pelo usuário ganham prioridade de substituição.
+
 ## [0.6.0] - 2026-09-29
 
 ### Adicionado
