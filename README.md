@@ -3,7 +3,7 @@
 [![Tests](https://github.com/Neto0220/RPG-Combat-Engine/actions/workflows/test.yml/badge.svg)](https://github.com/Neto0220/RPG-Combat-Engine/actions/workflows/test.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Motor de combate open source e independente para fichas de RPG, com foco em regras declarativas, sequências de ataque e extensibilidade.
+Motor open source e independente para fichas e aplicativos de RPG, com foco em regras declarativas, combate, recursos, progressão e extensibilidade entre sistemas.
 
 > Este repositório contém apenas o motor genérico. Ele não contém fichas, personagens, saves ou dados privados do aplicativo que originou o projeto.
 
@@ -42,6 +42,16 @@ As mecânicas são declarativas sempre que possível. Em vez de escrever código
   }
 }
 ```
+
+## Camada universal 0.5.0
+
+Além do resolvedor de combate original, o motor possui uma camada universal baseada em perfis de regras. Ela cobre testes roll-over e roll-under, testes opostos, iniciativa configurável, diferentes economias de ação, localização e pipeline de dano, recursos arbitrários, progressão, papéis, implantes e armas de fogo.
+
+O núcleo não contém nomes de personagens, classes, habilidades ou jogos específicos. Cada aplicativo fornece um `rulesProfile` e os dados da ficha.
+
+- [Guia da camada universal](docs/UNIVERSAL_RULES.md)
+- [Matriz de cobertura](docs/SYSTEM_COVERAGE.md)
+- [Integração com aplicativos](docs/APP_INTEGRATION.md)
 
 ## Instalação
 
