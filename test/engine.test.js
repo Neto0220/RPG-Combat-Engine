@@ -214,3 +214,61 @@ test("nextTurn clears optional selections and once-turn usage", () => {
   assert.deepEqual(next.usedTurn, []);
   assert.deepEqual(next.usedCombat, ["b"]);
 });
+
+
+test("app-shaped weapon abilities use generic mechanics metadata", () => {
+  const actor = baseActor();
+  actor.weapons[0].abilities = [
+    {
+      id: "special",
+      name: "Special",
+      dice: [{ expression: "1d6" }],
+      attributeDamage: ["DEX"],
+      cost: 10,
+      costResource: "mana",
+      mechanics: {
+        enabled: true,
+        timing: "weapon_action",
+        frequency: "once_turn",
+        actionLabel: "Special action",
+        conditionText: "Requires a fictional condition",
+        effectText: "Applies a fictional status",
+        targetStatusName: "Marked",
+        targetStatusDie: "1d4",
+        targetStatusMode: "max"
+      }
+    }
+  ];
+
+  const state = createCombatState({
+    primaryWeaponId: "sword",
+    secondaryWeaponId: "dagger"
+  });
+
+  const preview = resolveWeaponAction({
+    actor,
+    state,
+    actionId: "special",
+    confirmCondition: false,
+    rng: lowRoll
+  });
+
+  assert.equal(preview.requiresConfirmation, true);
+  assert.equal(preview.condition, "Requires a fictional condition");
+
+  const result = resolveWeaponAction({
+    actor,
+    state,
+    actionId: "special",
+    confirmCondition: true,
+    rng: lowRoll
+  });
+
+  assert.equal(result.damage, 4); // 1d6 minimum 1 + DEX 3
+  assert.equal(result.actor.resources.mana.current, 90);
+  assert.equal(result.appliedStatus.name, "Marked");
+  assert.equal(result.appliedStatus.amount, 1);
+  assert.equal(result.target.statuses.Marked, 1);
+  assert.equal(result.metadata.label, "Special action");
+  assert.equal(result.state.usedTurn.includes("special"), true);
+});
