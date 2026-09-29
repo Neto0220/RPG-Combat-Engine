@@ -32,5 +32,6 @@ export {
   listWeaponActions,
   resolveWeaponAction,
   listMagicActions,
-  resolveMagicAction
+  resolveMagicAction,
+  finishTurn
 } from "./engine.js";
