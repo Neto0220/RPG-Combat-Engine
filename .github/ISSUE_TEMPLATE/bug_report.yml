@@ -1,0 +1,46 @@
+name: Bug
+description: Relate um erro de cálculo ou comportamento inesperado.
+title: "[Bug] "
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use somente dados fictícios e mínimos. Não envie saves pessoais ou informações privadas.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: O que aconteceu?
+      description: Descreva o comportamento observado.
+    validations:
+      required: true
+
+  - type: textarea
+    id: input
+    attributes:
+      label: Entrada mínima
+      description: Personagem, armas, efeitos e estado necessários para reproduzir.
+      render: javascript
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Resultado esperado
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Resultado obtido
+    validations:
+      required: true
+
+  - type: input
+    id: node
+    attributes:
+      label: Versão do Node.js
+      placeholder: "22.x"
