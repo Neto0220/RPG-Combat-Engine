@@ -235,6 +235,22 @@ export function resolveAttackSequence({
 
   damageTotal += sequenceBonus.total;
 
+  const sequenceOnly = new Set(
+    selectedEffects
+      .filter(
+        (effect) =>
+          effect.duration === "sequence" ||
+          effect?.mechanics?.duration === "sequence"
+      )
+      .map((effect) => effect.id)
+  );
+
+  if (sequenceOnly.size) {
+    stateAfter.activeAbilityIds = stateAfter.activeAbilityIds.filter(
+      (id) => !sequenceOnly.has(id)
+    );
+  }
+
   return {
     actor: actorAfter,
     target: targetAfter,
