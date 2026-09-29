@@ -310,7 +310,8 @@ export function interpretMechanics(text, options = {}) {
     result.fields.damageReductionDice = result.mechanics.damageReductionDice;
     pushMatch(result, "damage_reduction_dice", result.mechanics.damageReductionDice, 0.96, reductionDice[0]);
   } else {
-    const reduction = raw.match(/\b(?:reduz|reducao de dano|redução de dano|rd)\s*(?:em|de|:)?\s*(\d+)\s*(?:de\s*)?dano?\b/i)
+    const reduction = raw.match(/\b(?:reduz)\s*(?:em|de|:)?\s*(\d+)\s*(?:de\s*)?dano\b/i)
+      || raw.match(/\b(?:reducao de dano|redução de dano|rd)\s*(?:em|de|:)?\s*(\d+)\b/i)
       || raw.match(/\b(?:rd)\s*\+?\s*(\d+)\b/i);
     if (reduction) {
       result.mechanics.damageReduction = number(reduction[1]);
