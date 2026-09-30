@@ -2,6 +2,24 @@
 
 Todas as mudanças relevantes do projeto serão documentadas aqui.
 
+## [0.9.0] - 2026-09-30
+
+### Adicionado
+
+- compilador de perfis por livro/sistema com alvos `runtime`, `rules`, `ui` e `assistant`;
+- perfil D&D 5e Livro do Jogador para economia de ações, iniciativa, CA, progressão e conjuração;
+- perfil Old Dragon Livro Básico com declaração de turno, iniciativa dependente da ação e nova rolagem por turno;
+- scaffold Cyberpunk 2020 sobre a família d10 tática, mantendo tabelas específicas configuráveis;
+- pacote Lovecraft tratado como referência literária/ambientação, sem atribuir regras inexistentes ao texto;
+- métodos de uso por perfil para criação, combate, magia, progressão, armas de fogo, ferimentos e ambientação;
+- testes de regressão para compilação por alvo e seleção de método de uso.
+
+### Compatibilidade
+
+- os perfis genéricos existentes continuam disponíveis;
+- o núcleo universal não passa a depender de nenhum livro específico;
+- perfis por livro funcionam como camadas opcionais sobre o mesmo motor declarativo.
+
 ## [0.8.0] - 2026-09-30
 
 ### Adicionado
