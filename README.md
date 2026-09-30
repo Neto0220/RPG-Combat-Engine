@@ -43,13 +43,14 @@ As mecânicas são declarativas sempre que possível. Em vez de escrever código
 }
 ```
 
-## Camada universal 0.5.0
+## Camada universal 0.8.0
 
 Além do resolvedor de combate original, o motor possui uma camada universal baseada em perfis de regras. Ela cobre testes roll-over e roll-under, testes opostos, iniciativa configurável, diferentes economias de ação, localização e pipeline de dano, recursos arbitrários, progressão, papéis, implantes e armas de fogo.
 
 O núcleo não contém nomes de personagens, classes, habilidades ou jogos específicos. Cada aplicativo fornece um `rulesProfile` e os dados da ficha.
 
 - [Guia da camada universal](docs/UNIVERSAL_RULES.md)
+- [Perfis de sistema e compilação de UI](docs/SYSTEM_PROFILES.md)
 - [Matriz de cobertura](docs/SYSTEM_COVERAGE.md)
 - [Integração com aplicativos](docs/APP_INTEGRATION.md)
 
