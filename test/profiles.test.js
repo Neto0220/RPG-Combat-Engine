@@ -106,8 +106,9 @@ test("assisted creation infers weapon and normalizes its damage field", () => {
   assert.equal("dice" in created.entity, false);
 });
 
-test("creation templates are provided by the engine for app reuse", () => {
-  assert.match(creationTemplate("ability"), /Nome da habilidade:/);
-  assert.match(creationTemplate("weapon"), /Nome da arma:/);
-  assert.match(creationTemplate("class"), /Nome da classe:/);
+test("creation templates are speech-first prompts provided by the engine", () => {
+  assert.match(creationTemplate("ability"), /Conte do seu jeito/i);
+  assert.match(creationTemplate("weapon"), /Fale como é a arma/i);
+  assert.match(creationTemplate("class"), /Descreva a classe/i);
+  assert.doesNotMatch(creationTemplate("ability"), /Nome da habilidade:/);
 });

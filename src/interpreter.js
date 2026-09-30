@@ -303,7 +303,7 @@ export function interpretMechanics(text, options = {}) {
     pushMatch(result, "cost", { resource: "mana", amount: result.fields.cost }, 0.99, directManaCost[0]);
   }
 
-  const costRegex = /\b(?:custa|gasta|consome|usar custa|costs?)\s*(\d+(?:[.,]\d+)?)\s*(mana|mp|vida|pv|hp|life|defesa|def|defense|stamina|vigor|energia|energy)\b/gi;
+  const costRegex = /\b(?:custa|gasta|gasto|gastei|consome|consumo|usar custa|costs?)\s*(\d+(?:[.,]\d+)?)\s*(mana|mp|vida|pv|hp|life|defesa|def|defense|stamina|vigor|energia|energy)\b/gi;
   for (const match of mechanicsRaw.matchAll(costRegex)) {
     const amount = number(match[1]);
     const resource = resourceId(match[2]);
@@ -540,7 +540,7 @@ export function interpretMechanics(text, options = {}) {
     const expression = damageDiceMatches[0];
     const triggeredBonus = /\b(?:ao|quando)\s+(?:atacar|acertar|atingir|causar dano)\b/i.test(mechanicsRaw);
     const standaloneDamage =
-      context === "ability" &&
+      ["ability", "weapon"].includes(context) &&
       result.mechanics.timing === "on_use" &&
       !triggeredBonus &&
       !result.mechanics.extraAttacks &&
@@ -553,7 +553,7 @@ export function interpretMechanics(text, options = {}) {
     if (actionLike) {
       result.fields.dice = unique([...(result.fields.dice || []).map((item) => item.expression || item), expression])
         .map((value) => ({ expression: value, label: "Dano" }));
-      if (standaloneDamage) {
+      if (standaloneDamage && context === "ability") {
         result.mechanics.timing = "magic_action";
         result.mechanics.magicActionEligible = true;
         result.mechanics.duration = "instant";
@@ -693,6 +693,7 @@ function emptyLike(value) {
 }
 
 function mechanicIsDefault(key, value) {
+  if (value == null) return true;
   if (!(key in MECHANIC_DEFAULTS)) return emptyLike(value);
   return JSON.stringify(value) === JSON.stringify(MECHANIC_DEFAULTS[key]);
 }
@@ -760,9 +761,9 @@ const ENTITY_TYPE_PATTERNS = Object.freeze([
   { id: "ability", patterns: [/nome da habilidade/i, /crie uma habilidade/i, /a habilidade se chama/i] },
   { id: "weapon", patterns: [/nome da arma/i, /crie uma arma/i, /a arma se chama/i] },
   { id: "item", patterns: [/nome do item/i, /crie um item/i, /o item se chama/i] },
-  { id: "class", patterns: [/nome da classe/i, /crie uma classe/i, /a classe se chama/i] },
-  { id: "subclass", patterns: [/nome da subclasse/i, /crie uma subclasse/i, /a subclasse se chama/i] },
-  { id: "race", patterns: [/nome da raça/i, /nome da raca/i, /crie uma raça/i, /crie uma raca/i] },
+  { id: "class", patterns: [/nome da classe/i, /crie uma classe/i, /quero criar uma classe/i, /a classe se chama/i, /classe (?:chamada|chamado)/i] },
+  { id: "subclass", patterns: [/nome da subclasse/i, /crie uma subclasse/i, /quero criar uma subclasse/i, /a subclasse se chama/i, /subclasse (?:chamada|chamado)/i] },
+  { id: "race", patterns: [/nome da raça/i, /nome da raca/i, /crie uma raça/i, /crie uma raca/i, /quero criar uma raça/i, /quero criar uma raca/i, /raça (?:se chama|chamada|chamado)/i, /raca (?:se chama|chamada|chamado)/i] },
   { id: "passive", patterns: [/nome da passiva/i, /crie uma passiva/i, /a passiva se chama/i] },
   { id: "role", patterns: [/nome do papel/i, /nome da profissão/i, /nome da profissao/i, /crie um papel/i] },
   { id: "cyberware", patterns: [/nome do implante/i, /nome do cyberware/i, /crie um implante/i] }
@@ -778,18 +779,18 @@ export function inferEntityType(text, fallback = "ability") {
 
 export function creationTemplate(context = "ability") {
   const templates = {
-    ability: "Nome da habilidade: Impacto Espacial\nDescrição: Dá um golpe que distorce o espaço ao redor do alvo.\nDano: D12\nCusto de mana: 5\nUso: uma vez por turno\nTipo: magia",
-    weapon_ability: "Nome da habilidade da arma: Golpe Rúnico\nDescrição: Libera a energia acumulada da arma.\nDano: D12\nCusto de mana: 5\nUso: uma vez por turno",
-    item_ability: "Nome da habilidade do item: Pulso Arcano\nDescrição: Ativa o efeito especial do item.\nCusto de mana: 5\nUso: uma vez por turno",
-    weapon: "Nome da arma: Lâmina Arcana\nDescrição: Uma arma com efeito especial.\nDano: 1d8\nUso: sem limite",
-    item: "Nome do item: Amuleto Arcano\nDescrição: Enquanto equipado concede +2 Defesa.\nTipo: passiva",
-    equipment: "Nome do item: Armadura Arcana\nDescrição: Enquanto equipada reduz 3 de dano.\nTipo: passiva",
-    class: "Nome da classe: Guardião\nDescrição: Especialista em defesa e controle.\nTipo: passiva",
-    subclass: "Nome da subclasse: Guardião Rúnico\nDescrição: Usa runas para modificar suas ações.\nTipo: passiva",
-    race: "Nome da raça: Nômade\nDescrição: Recebe +2 Destreza enquanto estiver em movimento.\nTipo: passiva",
-    passive: "Nome da passiva: Instinto Arcano\nDescrição: Enquanto ativa concede +2 Defesa.\nTipo: passiva",
-    role: "Nome do papel: Operativo\nDescrição: Especialista em agir rapidamente sob pressão.\nTipo: passiva",
-    cyberware: "Nome do implante: Reflexo Neural\nDescrição: Enquanto ativo concede +2 em iniciativa.\nTipo: passiva"
+    ability: "Conte do seu jeito como é a habilidade, o que ela faz, quanto custa, quando pode ser usada e qualquer efeito importante. Você pode falar normalmente pelo microfone do teclado.",
+    weapon_ability: "Descreva normalmente a técnica da arma: o que acontece, dano, custo, condição, limite de uso e qualquer detalhe relevante.",
+    item_ability: "Explique com suas palavras o poder do item, quando ativa, o que muda, custos e limites.",
+    weapon: "Fale como é a arma, como ela se chama, que dano causa, quais propriedades tem e qualquer habilidade especial.",
+    item: "Conte que item você quer criar, como ele funciona e que benefícios, custos, limites ou efeitos ele possui.",
+    equipment: "Descreva o equipamento livremente, incluindo nome, proteção, bônus, limitações e efeitos especiais se existirem.",
+    class: "Descreva a classe como você explicaria para outra pessoa: nome, função, estilo, recursos, vantagens, limitações e poderes importantes.",
+    subclass: "Conte como funciona a subclasse, o que a diferencia da classe principal e quais capacidades ou limitações ela traz.",
+    race: "Descreva a raça naturalmente: como ela se chama, aparência ou conceito, tamanho, deslocamento, atributos, sentidos, idiomas, resistências, imunidades e traços que você imaginar.",
+    passive: "Explique a passiva normalmente, dizendo quando vale, o que modifica e se existe condição ou limite.",
+    role: "Descreva o papel ou profissão, suas especialidades, recursos e capacidades.",
+    cyberware: "Explique o implante, o que ele faz, seus bônus, custos, riscos e limitações."
   };
   return templates[context] || templates.ability;
 }
