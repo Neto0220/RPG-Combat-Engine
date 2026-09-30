@@ -6,6 +6,7 @@ import {
 } from "./book-profiles.js";
 import { createEntityFromText, interpretMechanics } from "./interpreter.js";
 import { deepMerge, setPath } from "./rules.js";
+import { evaluateScenarioAgainstCorpus, listDesignBenchmarks } from "./design-corpus.js";
 
 export const AI_MANAGER_VERSION = 1;
 
@@ -353,7 +354,7 @@ export function applyOperations(profile, operations = []) {
 
 function referenceScores(text) {
   const n = normalize(text);
-  return REFERENCE_REASONING_PATTERNS
+  const legacy = REFERENCE_REASONING_PATTERNS
     .map((pattern) => {
       const matchedSignals = pattern.signals.filter((signal) =>
         n.includes(normalize(signal))
@@ -370,8 +371,31 @@ function referenceScores(text) {
         lessons: clone(pattern.lessons)
       };
     })
-    .filter((item) => item.matchedSignals.length)
-    .sort((a, b) => b.score - a.score || b.matchedSignals.length - a.matchedSignals.length);
+    .filter((item) => item.matchedSignals.length);
+
+  const benchmarks = evaluateScenarioAgainstCorpus(text, { limit: 10 }).matches.map((item) => ({
+    id: item.id,
+    kind: "design_benchmark",
+    label: item.name,
+    profileId: null,
+    score: item.score,
+    matchedSignals: clone(item.matchedSignals || []),
+    lessons: clone(item.lessons || []),
+    mechanics: clone(item.mechanics || {}),
+    recognition: clone(item.recognition || [])
+  }));
+
+  const combined = new Map();
+  for (const item of [...legacy, ...benchmarks]) {
+    const previous = combined.get(item.id);
+    if (!previous || Number(item.score || 0) > Number(previous.score || 0)) {
+      combined.set(item.id, item);
+    }
+  }
+
+  return [...combined.values()]
+    .sort((a, b) => Number(b.score || 0) - Number(a.score || 0) || (b.matchedSignals?.length || 0) - (a.matchedSignals?.length || 0))
+    .slice(0, 12);
 }
 
 function op(path, value, reason, confidence = 0.9, source = "scenario") {
@@ -685,6 +709,7 @@ export function analyzeScenario(text, options = {}) {
     normalized,
     signals,
     references,
+    designEvaluation: evaluateScenarioAgainstCorpus(prompt, { limit: 8 }),
     baseProfileId: options.baseProfileId || null
   };
 }
@@ -896,6 +921,7 @@ export function compileRuleWorkspace(workspace, branchId = null) {
 function providerReferenceContext() {
   return {
     references: clone(REFERENCE_REASONING_PATTERNS),
+    designBenchmarks: listDesignBenchmarks(),
     bookProfiles: listBookProfiles().map((item) => ({
       id: item.id,
       source: item.source,
@@ -1094,7 +1120,23 @@ export function createAIManager(options = {}) {
     },
 
     references() {
-      return clone(REFERENCE_REASONING_PATTERNS);
+      return [
+        ...clone(REFERENCE_REASONING_PATTERNS),
+        ...listDesignBenchmarks().map((entry) => ({
+          id: entry.id,
+          kind: "design_benchmark",
+          label: entry.name,
+          profileId: null,
+          signals: clone(entry.signals || []),
+          lessons: clone(entry.lessons || []),
+          mechanics: clone(entry.mechanics || {}),
+          recognition: clone(entry.recognition || [])
+        }))
+      ];
+    },
+
+    designBenchmarks() {
+      return listDesignBenchmarks();
     }
   };
 
