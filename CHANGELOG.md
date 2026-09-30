@@ -2,6 +2,25 @@
 
 Todas as mudanças relevantes do projeto serão documentadas aqui.
 
+## [1.2.0] - 2026-09-30
+
+### Adicionado
+
+- orquestrador de conteúdo para transformar narrativa livre em drafts estruturados de personagem, raça, classe, subclasse, habilidade, arma, item, passiva, papel e cyberware;
+- suporte explícito a entrada por fala/transcrição sem exigir sintaxe `campo: valor`;
+- extração local de nome, descrição, bônus de atributo, deslocamento, tamanho, idiomas, resistências, imunidades, sentidos e traços;
+- validação de campos base e lista de incertezas/missing em vez de inventar dados;
+- aplicação segura do draft preservando campos manuais e substituindo apenas placeholders ou dados vazios;
+- metadados `aiContent` com fatos inferidos, confiança e caminhos aplicados;
+- contrato de provider para síntese de entidades por modelo externo/local;
+- integração da síntese de conteúdo com o mesmo AI Rule Manager;
+- API `createUnifiedEngine()` para processar narrativa de entidade e narrativa de regras pelo mesmo sistema.
+
+### Alterado
+
+- templates de criação deixam de ensinar formato rígido e passam a pedir descrição natural;
+- o fluxo de criação assistida pode ser acionado por texto digitado ou transcrito pelo microfone do teclado.
+
 ## [1.1.0] - 2026-09-30
 
 ### Adicionado
