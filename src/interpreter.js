@@ -540,7 +540,7 @@ export function interpretMechanics(text, options = {}) {
     const expression = damageDiceMatches[0];
     const triggeredBonus = /\b(?:ao|quando)\s+(?:atacar|acertar|atingir|causar dano)\b/i.test(mechanicsRaw);
     const standaloneDamage =
-      context === "ability" &&
+      ["ability", "weapon"].includes(context) &&
       result.mechanics.timing === "on_use" &&
       !triggeredBonus &&
       !result.mechanics.extraAttacks &&
@@ -553,7 +553,7 @@ export function interpretMechanics(text, options = {}) {
     if (actionLike) {
       result.fields.dice = unique([...(result.fields.dice || []).map((item) => item.expression || item), expression])
         .map((value) => ({ expression: value, label: "Dano" }));
-      if (standaloneDamage) {
+      if (standaloneDamage && context === "ability") {
         result.mechanics.timing = "magic_action";
         result.mechanics.magicActionEligible = true;
         result.mechanics.duration = "instant";
@@ -693,6 +693,7 @@ function emptyLike(value) {
 }
 
 function mechanicIsDefault(key, value) {
+  if (value == null) return true;
   if (!(key in MECHANIC_DEFAULTS)) return emptyLike(value);
   return JSON.stringify(value) === JSON.stringify(MECHANIC_DEFAULTS[key]);
 }
