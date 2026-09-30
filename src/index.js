@@ -114,3 +114,11 @@ export {
   profileUiSections,
   compileUiSchema
 } from "./profiles.js";
+
+export {
+  BOOK_COMPILATION_TARGETS,
+  BOOK_PROFILE_IDS,
+  listBookProfiles,
+  getBookUsageMethods,
+  compileBookProfile
+} from "./book-profiles.js";
