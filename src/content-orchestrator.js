@@ -106,6 +106,22 @@ function compactText(text) {
     .trim();
 }
 
+function cleanEntityName(value) {
+  let name = String(value || "")
+    .trim()
+    .replace(/^[\"“”']+|[\"“”']+$/g, "")
+    .trim();
+  name = name.replace(
+    /\s+(?:que|e)\s+(?=(?:custa|gasta|consome|causa|d[aá]|faz|pode|consegue|ganha|recebe|tem|possui|se\s+move|anda|voa|fala|resiste|[ée]\s+resistente|[ée]\s+imune)\b).*$/i,
+    ""
+  );
+  name = name.replace(
+    /\s+(?=(?:custa|gasta|consome|causa|d[aá]|faz|pode|ganha|recebe)\b).*$/i,
+    ""
+  );
+  return name.trim().replace(/[,:;-]+$/, "").trim();
+}
+
 function unique(values) {
   return [...new Set((values || []).filter((value) => value != null && String(value).trim()).map((value) => String(value).trim()))];
 }
@@ -212,7 +228,7 @@ function extractAttributeBonuses(text) {
 
 function extractMovement(text) {
   const raw = compactText(text);
-  const match = raw.match(/\b(?:deslocamento|movimento|move-se|se move|anda|caminha|voa|nada)\s*(?:de|a|at[eé])?\s*(\d+(?:[.,]\d+)?)\s*(m|metros?|ft|p[eé]s?)\b/i);
+  const match = raw.match(/\b(?:deslocamento|movimento|move-se|movem-se|se move|se movem|anda|andam|caminha|caminham|voa|voam|nada|nadam)\s*(?:de|a|at[eé])?\s*(\d+(?:[.,]\d+)?)\s*(m|metros?|ft|p[eé]s?)\b/i);
   if (!match) return null;
   const mode = /voa/i.test(match[0]) ? "fly" : /nada/i.test(match[0]) ? "swim" : "walk";
   return {
@@ -284,7 +300,7 @@ function extractSenses(text) {
 
 function extractTraits(text) {
   const parts = sentenceParts(text);
-  const traitSignals = /\b(?:pode|podem|consegue|conseguem|possui|possuem|ganha|ganham|recebe|recebem|resistente|imune|vis[aã]o|respira|voa|nada|regenera|teleporta|transforma|vantagem|desvantagem)\b/i;
+  const traitSignals = /\b(?:pode|podem|possa|possam|consegue|conseguem|consiga|consigam|possui|possuem|ganha|ganham|recebe|recebem|resistente|imune|vis[aã]o|enxerga|enxergam|enxergar|respira|respiram|respirar|voa|voam|nada|nadam|regenera|regeneram|teleporta|teleportam|transforma|transformam|vantagem|desvantagem)\b/i;
   return unique(
     parts
       .filter((part) => traitSignals.test(part))
@@ -350,6 +366,22 @@ function collectDraftChanges(draft, suggestion, facts, raw, explicitName, descri
   const changes = [];
   if (explicitName) changes.push(change("name", explicitName, 0.99, explicitName));
   if (description) changes.push(change("description", description, 0.92, raw.slice(0, 220)));
+
+  const costMatch = (suggestion?.matches || []).find((item) => item.rule === "cost");
+  if (costMatch && draft.cost != null) {
+    changes.push(change("cost", draft.cost, Number(costMatch.confidence || 0.96), costMatch.text || raw));
+    if (draft.costResource) changes.push(change("costResource", draft.costResource, Number(costMatch.confidence || 0.96), costMatch.text || raw));
+  }
+  if (Array.isArray(draft.dice) && draft.dice.length) {
+    changes.push(change("dice", draft.dice, 0.96, raw));
+  }
+  if (Array.isArray(draft.damageDice) && draft.damageDice.length) {
+    changes.push(change("damageDice", draft.damageDice, 0.96, raw));
+  }
+  if (Array.isArray(draft.attributeDamage) && draft.attributeDamage.length) {
+    changes.push(change("attributeDamage", draft.attributeDamage, 0.9, raw));
+  }
+  if (draft.type) changes.push(change("type", draft.type, 0.88, raw));
 
   for (const match of suggestion?.matches || []) {
     const rule = String(match.rule || "");
@@ -423,7 +455,7 @@ export function synthesizeNarrativeEntity(text, options = {}) {
   });
 
   const suggestion = creation.suggestion || interpretMechanics(raw, { context: entityType });
-  const explicitName = creation.entity?.name || inferSpokenName(raw, entityType);
+  const explicitName = cleanEntityName(creation.entity?.name || inferSpokenName(raw, entityType));
   const description =
     creation.entity?.description ||
     (raw ? inferDescription(raw) : "");
