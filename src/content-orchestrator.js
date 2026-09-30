@@ -112,11 +112,11 @@ function cleanEntityName(value) {
     .replace(/^[\"“”']+|[\"“”']+$/g, "")
     .trim();
   name = name.replace(
-    /\s+(?:que|e)\s+(?=(?:custa|gasta|consome|causa|d[aá]|faz|pode|consegue|ganha|recebe|tem|possui|se\s+move|anda|voa|fala|resiste|[ée]\s+resistente|[ée]\s+imune)\b).*$/i,
+    /\s+(?:que|e)\s+(?=(?:custa|gasta|consome|causa|dá|dar|faz|pode|consegue|ganha|recebe|tem|possui|se\s+move|anda|voa|fala|resiste|[ée]\s+resistente|[ée]\s+imune)\b).*$/i,
     ""
   );
   name = name.replace(
-    /\s+(?=(?:custa|gasta|consome|causa|d[aá]|faz|pode|ganha|recebe)\b).*$/i,
+    /\s+(?=(?:custa|gasta|consome|causa|dá|dar|faz|pode|ganha|recebe)\b).*$/i,
     ""
   );
   return name.trim().replace(/[,:;-]+$/, "").trim();
@@ -250,7 +250,7 @@ function extractSize(text) {
 
 function extractLanguages(text) {
   const raw = compactText(text);
-  const match = raw.match(/\b(?:fala|falam|conhece|conhecem|idiomas?|l[ií]nguas?)\s*(?:s[aã]o|incluem|:|,)?\s*([^.;!?\n]{2,100})/i);
+  const match = raw.match(/\b(?:falam|fala|conhecem|conhece|idiomas?|l[ií]nguas?)\s*(?:s[aã]o|incluem|:|,)?\s*([^.;!?\n]{2,100})/i);
   if (!match) return [];
   return unique(
     match[1]
