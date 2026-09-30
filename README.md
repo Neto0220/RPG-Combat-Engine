@@ -43,7 +43,7 @@ As mecânicas são declarativas sempre que possível. Em vez de escrever código
 }
 ```
 
-## Camada universal 0.8.0
+## Camada universal 0.9.0
 
 Além do resolvedor de combate original, o motor possui uma camada universal baseada em perfis de regras. Ela cobre testes roll-over e roll-under, testes opostos, iniciativa configurável, diferentes economias de ação, localização e pipeline de dano, recursos arbitrários, progressão, papéis, implantes e armas de fogo.
 
@@ -53,6 +53,31 @@ O núcleo não contém nomes de personagens, classes, habilidades ou jogos espec
 - [Perfis de sistema e compilação de UI](docs/SYSTEM_PROFILES.md)
 - [Matriz de cobertura](docs/SYSTEM_COVERAGE.md)
 - [Integração com aplicativos](docs/APP_INTEGRATION.md)
+
+### Perfis por livro/sistema
+
+A versão 0.9 adiciona uma camada opcional de compilação por material de referência. O núcleo continua genérico; os perfis apenas configuram regras, interface e interpretação.
+
+```js
+import { compileBookProfile } from "./src/index.js";
+
+const dndCombat = compileBookProfile("dnd-5e-phb", {
+  target: "runtime",
+  usageMethod: "combat"
+});
+
+const oldDragonUi = compileBookProfile("old-dragon-basic", {
+  target: "ui"
+});
+```
+
+Alvos de compilação disponíveis: `runtime`, `rules`, `ui` e `assistant`.
+
+Perfis incluídos:
+- `dnd-5e-phb`: economia de ações, iniciativa, CA, progressão e conjuração do fluxo-base do Livro do Jogador;
+- `old-dragon-basic`: declaração de turno, iniciativa dependente da ação e rolagem de iniciativa por turno;
+- `cyberpunk-2020-scaffold`: estrutura d10 tática com tabelas específicas mantidas configuráveis;
+- `lovecraft-setting`: referência de ambientação/vocabulário, sem atribuir regras ao texto literário.
 
 ## Instalação
 
@@ -157,6 +182,8 @@ src/
   sequence.js      geração da sequência de ataques
   statuses.js      stacks e efeitos de status
   engine.js        resolução de combate e recursos
+  profiles.js      perfis universais de sistema
+  book-profiles.js compilação e métodos de uso por livro/sistema
   index.js         API pública
 
 examples/
