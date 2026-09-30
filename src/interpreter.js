@@ -731,6 +731,93 @@ if (typeof window !== "undefined") {
     interpretMechanics,
     applyMechanicsSuggestion,
     explainMechanicsSuggestion,
-    splitCreationFields
+    splitCreationFields,
+    inferEntityType,
+    creationTemplate,
+    createEntityFromText
   });
+}
+
+
+const ENTITY_TYPE_PATTERNS = Object.freeze([
+  { id: "weapon_ability", patterns: [/nome da habilidade da arma/i, /nome da habilidade do item/i, /habilidade da arma/i] },
+  { id: "ability", patterns: [/nome da habilidade/i, /crie uma habilidade/i, /a habilidade se chama/i] },
+  { id: "weapon", patterns: [/nome da arma/i, /crie uma arma/i, /a arma se chama/i] },
+  { id: "item", patterns: [/nome do item/i, /crie um item/i, /o item se chama/i] },
+  { id: "class", patterns: [/nome da classe/i, /crie uma classe/i, /a classe se chama/i] },
+  { id: "subclass", patterns: [/nome da subclasse/i, /crie uma subclasse/i, /a subclasse se chama/i] },
+  { id: "race", patterns: [/nome da raça/i, /nome da raca/i, /crie uma raça/i, /crie uma raca/i] },
+  { id: "passive", patterns: [/nome da passiva/i, /crie uma passiva/i, /a passiva se chama/i] },
+  { id: "role", patterns: [/nome do papel/i, /nome da profissão/i, /nome da profissao/i, /crie um papel/i] },
+  { id: "cyberware", patterns: [/nome do implante/i, /nome do cyberware/i, /crie um implante/i] }
+]);
+
+export function inferEntityType(text, fallback = "ability") {
+  const raw = String(text || "");
+  for (const entry of ENTITY_TYPE_PATTERNS) {
+    if (entry.patterns.some((pattern) => pattern.test(raw))) return entry.id;
+  }
+  return fallback || "ability";
+}
+
+export function creationTemplate(context = "ability") {
+  const templates = {
+    ability: "Nome da habilidade: Impacto Espacial\nDescrição: Dá um golpe que distorce o espaço ao redor do alvo.\nDano: D12\nCusto de mana: 5\nUso: uma vez por turno\nTipo: magia",
+    weapon_ability: "Nome da habilidade da arma: Golpe Rúnico\nDescrição: Libera a energia acumulada da arma.\nDano: D12\nCusto de mana: 5\nUso: uma vez por turno",
+    item_ability: "Nome da habilidade do item: Pulso Arcano\nDescrição: Ativa o efeito especial do item.\nCusto de mana: 5\nUso: uma vez por turno",
+    weapon: "Nome da arma: Lâmina Arcana\nDescrição: Uma arma com efeito especial.\nDano: 1d8\nUso: sem limite",
+    item: "Nome do item: Amuleto Arcano\nDescrição: Enquanto equipado concede +2 Defesa.\nTipo: passiva",
+    equipment: "Nome do item: Armadura Arcana\nDescrição: Enquanto equipada reduz 3 de dano.\nTipo: passiva",
+    class: "Nome da classe: Guardião\nDescrição: Especialista em defesa e controle.\nTipo: passiva",
+    subclass: "Nome da subclasse: Guardião Rúnico\nDescrição: Usa runas para modificar suas ações.\nTipo: passiva",
+    race: "Nome da raça: Nômade\nDescrição: Recebe +2 Destreza enquanto estiver em movimento.\nTipo: passiva",
+    passive: "Nome da passiva: Instinto Arcano\nDescrição: Enquanto ativa concede +2 Defesa.\nTipo: passiva",
+    role: "Nome do papel: Operativo\nDescrição: Especialista em agir rapidamente sob pressão.\nTipo: passiva",
+    cyberware: "Nome do implante: Reflexo Neural\nDescrição: Enquanto ativo concede +2 em iniciativa.\nTipo: passiva"
+  };
+  return templates[context] || templates.ability;
+}
+
+function entitySkeleton(type) {
+  switch (type) {
+    case "weapon":
+      return { name: "", description: "", damageDice: [], attributeDamage: [], abilities: [], mechanics: {} };
+    case "item":
+    case "equipment":
+      return { name: "", description: "", mechanics: {} };
+    case "weapon_ability":
+    case "item_ability":
+    case "ability":
+      return { name: "", description: "", cost: 0, costResource: "mana", dice: [], attributeDamage: [], mechanics: {} };
+    case "class":
+    case "subclass":
+    case "race":
+    case "role":
+    case "cyberware":
+    case "passive":
+      return { name: "", description: "", mechanics: {} };
+    default:
+      return { name: "", description: "", mechanics: {} };
+  }
+}
+
+export function createEntityFromText(text, options = {}) {
+  const fallback = options.context || "ability";
+  const entityType = options.entityType || inferEntityType(text, fallback);
+  const interpretationContext =
+    entityType === "weapon_ability" ? "weapon_ability"
+      : entityType === "item_ability" ? "item_ability"
+        : entityType;
+  const suggestion = interpretMechanics(text, { ...options, context: interpretationContext });
+  const entity = applyMechanicsSuggestion(
+    { ...entitySkeleton(entityType), ...(options.baseEntity || {}) },
+    suggestion,
+    { overwrite: Boolean(options.overwrite) }
+  );
+  return {
+    entityType,
+    entity,
+    suggestion,
+    template: creationTemplate(entityType)
+  };
 }
