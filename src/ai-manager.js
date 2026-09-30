@@ -558,7 +558,7 @@ function detectOldSchoolFlow(normalized, operations) {
 
 function detectTacticalFeatures(normalized, operations) {
   const sections = {};
-  if (/\bpericia\b|\bperícia\b/.test(normalized)) sections.skills = true;
+  if (/\bpericias?\b|\bperícias?\b/.test(normalized)) sections.skills = true;
   if (/armas de fogo|cadencia|cadência/.test(normalized)) sections.firearms = true;
   if (/municao|munição/.test(normalized)) sections.ammunition = true;
   if (/localizacao de dano|localização de dano|local de acerto/.test(normalized)) sections.hitLocations = true;
@@ -844,7 +844,7 @@ export function applyAdaptationPlan(workspace, rawPlan, options = {}) {
     workspace: next,
     branchId: branch.id,
     revisionId,
-    compiled: compileSystemProfile(after),
+    compiled: compileSystemProfile(after, { detached: true }),
     plan
   };
 }
@@ -884,7 +884,7 @@ export function rollbackAdaptation(workspace, options = {}) {
     workspace: next,
     branchId: branch.id,
     revisionId,
-    compiled: compileSystemProfile(branch.profile)
+    compiled: compileSystemProfile(branch.profile, { detached: true })
   };
 }
 
