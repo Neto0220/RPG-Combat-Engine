@@ -99,5 +99,18 @@ export {
   MECHANICS_KB,
   interpretMechanics,
   applyMechanicsSuggestion,
-  explainMechanicsSuggestion
+  explainMechanicsSuggestion,
+  inferEntityType,
+  creationTemplate,
+  createEntityFromText
 } from "./interpreter.js";
+
+
+export {
+  SYSTEM_PROFILE_TEMPLATES,
+  listSystemProfiles,
+  createSystemProfile,
+  compileSystemProfile,
+  profileUiSections,
+  compileUiSchema
+} from "./profiles.js";
