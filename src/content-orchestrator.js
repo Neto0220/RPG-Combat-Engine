@@ -265,11 +265,11 @@ function extractTaggedPhrases(text, kind) {
   const raw = compactText(text);
   const patterns = kind === "resistance"
     ? [
-        /\b(?:resistente|resist[eê]ncia)\s+(?:a|ao|[àa])\s*([^.;!?\n]{2,60})/gi,
+        /\b(?:resistentes?|resist[eê]ncias?)\s+(?:a|ao|[àa])\s*([^.;!?\n]{2,60})/gi,
         /\breduz\s+(?:o\s+)?dano\s+de\s+([^.;!?\n]{2,60})/gi
       ]
     : [
-        /\bimune\s+(?:a|ao|[àa])\s*([^.;!?\n]{2,60})/gi,
+        /\bimunes?\s+(?:a|ao|[àa])\s*([^.;!?\n]{2,60})/gi,
         /\bimunidade\s+(?:a|ao|[àa])\s*([^.;!?\n]{2,60})/gi
       ];
   const out = [];
