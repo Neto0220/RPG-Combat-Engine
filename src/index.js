@@ -142,3 +142,14 @@ export {
   buildAIProviderRequest,
   createAIManager
 } from "./ai-manager.js";
+
+
+export {
+  DESIGN_CORPUS_VERSION,
+  DESIGN_DIMENSIONS,
+  RPG_DESIGN_CORPUS,
+  listDesignBenchmarks,
+  getDesignBenchmark,
+  compareDesignDimensions,
+  evaluateScenarioAgainstCorpus
+} from "./design-corpus.js";

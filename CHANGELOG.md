@@ -2,6 +2,23 @@
 
 Todas as mudanças relevantes do projeto serão documentadas aqui.
 
+## [1.1.0] - 2026-09-30
+
+### Adicionado
+
+- corpus de 30 RPGs de referência para raciocínio arquitetural da IA;
+- matriz comparável com resolução, graus de sucesso, economia de ações, iniciativa, dano, recursos, progressão, autoridade narrativa, tática, letalidade, construção de personagem e carga do mestre;
+- avaliação automática de cenários contra múltiplos sistemas em vez de depender apenas de palavras-chave de poucos perfis;
+- API `evaluateScenarioAgainstCorpus()`, `listDesignBenchmarks()`, `getDesignBenchmark()` e `compareDesignDimensions()`;
+- contexto completo dos 30 benchmarks enviado a providers de IA;
+- referências do AI Manager agora combinam livros/perfis locais e padrões de design do corpus.
+
+### Arquitetura
+
+- os benchmarks não copiam tabelas proprietárias; registram padrões de design e características mecânicas em alto nível;
+- a IA usa os sistemas como referências comparativas, não como moldes obrigatórios;
+- cenários próprios podem combinar padrões de várias famílias sem declarar um RPG específico.
+
 ## [1.0.0] - 2026-09-30
 
 ### Adicionado

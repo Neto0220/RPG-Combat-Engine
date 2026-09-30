@@ -29,7 +29,7 @@ test("analyzes a scenario using multiple rulebook reasoning patterns", () => {
   assert.ok(result.signals.includes("bonus_action"));
   assert.ok(result.signals.includes("reaction"));
   assert.ok(result.signals.includes("magic"));
-  assert.equal(result.references[0].id, "dnd-5e-phb");
+  assert.ok(result.references.some((item) => ["dnd-5e-phb", "dnd-5e-2024"].includes(item.id)));
 });
 
 test("plans and applies a d20 action-economy adaptation", () => {
