@@ -122,3 +122,23 @@ export {
   getBookUsageMethods,
   compileBookProfile
 } from "./book-profiles.js";
+
+export {
+  AI_MANAGER_VERSION,
+  AI_POLICIES,
+  AI_OPERATION_TYPES,
+  REFERENCE_REASONING_PATTERNS,
+  validateAdaptationPlan,
+  applyOperations,
+  analyzeScenario,
+  planScenarioAdaptation,
+  createRuleWorkspace,
+  forkRuleBranch,
+  switchRuleBranch,
+  applyAdaptationPlan,
+  rollbackAdaptation,
+  compileRuleWorkspace,
+  createAIProvider,
+  buildAIProviderRequest,
+  createAIManager
+} from "./ai-manager.js";
