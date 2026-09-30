@@ -207,25 +207,12 @@ const d10SkillModern = {
       minimum: 0,
       hitLocation: {
         die: "1d10",
-        table: [
-          { min: 1, max: 1, id: "head", label: "Head", multiplier: 2 },
-          { min: 2, max: 4, id: "torso", label: "Torso", multiplier: 1 },
-          { min: 5, max: 6, id: "right_arm", label: "Right arm", multiplier: 1 },
-          { min: 7, max: 8, id: "left_leg", label: "Leg", multiplier: 1 },
-          { min: 9, max: 10, id: "other_limb", label: "Limb", multiplier: 1 }
-        ]
+        table: []
       },
       armor: {
         layering: {
           mode: "highest_plus_difference_bonus",
-          bonusByDifference: [
-            { min: 0, max: 4, bonus: 5 },
-            { min: 5, max: 8, bonus: 4 },
-            { min: 9, max: 14, bonus: 3 },
-            { min: 15, max: 20, bonus: 2 },
-            { min: 21, max: 26, bonus: 1 },
-            { min: 27, max: 999, bonus: 0 }
-          ]
+          bonusByDifference: []
         }
       },
       health: { mode: "wounds", path: "wounds.current" },
@@ -287,7 +274,15 @@ const d10SkillModern = {
   interpreter: {
     preferredContexts: ["ability", "item_ability", "item", "role", "cyberware", "passive"],
     vocabulary: ["ref", "pericia", "cadencia", "municao", "blindagem", "localizacao", "recuo"]
-  }
+  },
+  configurationRequired: [
+    "damage.hitLocation.table",
+    "damage.armor.layering.bonusByDifference",
+    "damage.woundTrack.thresholds"
+  ],
+  notes: [
+    "Estrutura tática d10 pronta; tabelas específicas devem ser fornecidas pelo sistema/aplicativo."
+  ]
 };
 
 const customHorror = {
@@ -410,6 +405,7 @@ export function compileSystemProfile(input = {}) {
     ui: profile.ui || {},
     interpreter: profile.interpreter || {},
     notes: profile.notes || [],
+    configurationRequired: profile.configurationRequired || [],
     capabilities: {
       sections,
       phases: combat.phases || [profile.rules.actionEconomy.initialPhase],
@@ -424,4 +420,46 @@ export function compileSystemProfile(input = {}) {
 export function profileUiSections(profile) {
   const compiled = compileSystemProfile(profile);
   return compiled.capabilities.sections;
+}
+
+
+const SECTION_FIELD_HINTS = Object.freeze({
+  attributes: ["attributes"],
+  race: ["race", "race.features", "movement"],
+  class: ["class", "class.features", "level", "progression"],
+  subclass: ["subclass", "subclass.features"],
+  skills: ["skills"],
+  roles: ["role", "role.features"],
+  weapons: ["weapons", "damageDice", "damageAttributes"],
+  equipment: ["equipment", "armor"],
+  magic: ["abilities", "resources", "prepared", "spellSlots"],
+  spellPreparation: ["prepared", "spellbook", "spellSlots"],
+  passives: ["passives", "traits"],
+  cyberware: ["cyberware"],
+  firearms: ["weapons.rateOfFire", "weapons.fireModes"],
+  ammunition: ["weapons.ammo"],
+  hitLocations: ["damage.hitLocation"],
+  localizedArmor: ["armor"],
+  woundTrack: ["wounds"],
+  customResources: ["resources"]
+});
+
+export function compileUiSchema(profile) {
+  const compiled = compileSystemProfile(profile);
+  const sections = Object.entries(compiled.ui?.sections || {})
+    .filter(([, enabled]) => Boolean(enabled))
+    .map(([id]) => ({
+      id,
+      enabled: true,
+      fieldHints: structuredClone(SECTION_FIELD_HINTS[id] || [])
+    }));
+
+  return {
+    profileId: compiled.id,
+    family: compiled.family,
+    sections,
+    combat: structuredClone(compiled.ui?.combat || {}),
+    interpreter: structuredClone(compiled.interpreter || {}),
+    configurationRequired: structuredClone(compiled.configurationRequired || [])
+  };
 }
