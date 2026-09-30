@@ -153,3 +153,19 @@ export {
   compareDesignDimensions,
   evaluateScenarioAgainstCorpus
 } from "./design-corpus.js";
+
+
+export {
+  NARRATIVE_ENGINE_VERSION,
+  ENTITY_BLUEPRINTS,
+  validateNarrativeEntityDraft,
+  synthesizeNarrativeEntity,
+  applyEntitySynthesis,
+  buildEntitySynthesisProviderRequest,
+  mergeEntitySyntheses
+} from "./content-orchestrator.js";
+
+export {
+  UNIFIED_ENGINE_VERSION,
+  createUnifiedEngine
+} from "./unified-engine.js";
