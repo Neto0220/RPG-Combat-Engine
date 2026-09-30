@@ -1,6 +1,6 @@
 {
   "name": "@neto0220/rpg-combat-engine",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Motor universal e declarativo de regras, combate e recursos para fichas e aplicativos de RPG.",
   "type": "module",
   "main": "./src/index.js",
