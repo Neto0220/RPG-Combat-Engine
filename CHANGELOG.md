@@ -2,6 +2,29 @@
 
 Todas as mudanças relevantes do projeto serão documentadas aqui.
 
+## [1.0.0] - 2026-09-30
+
+### Adicionado
+
+- AI Rule Manager integrado ao núcleo declarativo;
+- análise de cenários sem exigir um RPG conhecido;
+- referências de raciocínio derivadas de famílias D&D 5e, Old Dragon, d10 tático, horror percentual e combo customizado;
+- planos de adaptação compostos por operações declarativas validadas;
+- workspaces de regras com ramificações independentes por cenário;
+- histórico de revisões e rollback;
+- políticas `observe`, `assist` e `autonomous`;
+- provider contract para conectar modelos externos ou locais sem acoplar o motor a um fornecedor;
+- mesclagem entre inferência local e proposta de provider;
+- proteção contra mutação de código executável e caminhos inseguros;
+- API para interpretação de entidades e mecânicas dentro do mesmo gerenciador.
+
+### Arquitetura
+
+- a IA modifica perfis declarativos de regras, interface e interpretação;
+- código JavaScript do engine não é reescrito dinamicamente em runtime;
+- mudanças podem ser auditadas, revertidas e isoladas em branches;
+- referências literárias continuam separadas de autoridade mecânica.
+
 ## [0.9.0] - 2026-09-30
 
 ### Adicionado
