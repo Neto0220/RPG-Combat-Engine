@@ -203,7 +203,7 @@ function nowIso() {
 }
 
 function profileSeed(profile) {
-  const compiled = compileSystemProfile(profile);
+  const compiled = compileSystemProfile(profile, { detached: typeof profile !== "string" });
   return {
     id: compiled.id,
     name: compiled.name,
@@ -890,7 +890,7 @@ export function rollbackAdaptation(workspace, options = {}) {
 
 export function compileRuleWorkspace(workspace, branchId = null) {
   const branch = requireBranch(workspace, branchId);
-  return compileSystemProfile(branch.profile);
+  return compileSystemProfile(branch.profile, { detached: true });
 }
 
 function providerReferenceContext() {
