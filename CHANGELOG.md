@@ -2,6 +2,27 @@
 
 Todas as mudanças relevantes do projeto serão documentadas aqui.
 
+## [0.8.0] - 2026-09-30
+
+### Adicionado
+
+- perfis compiláveis de famílias de sistema;
+- schema de interface derivado do perfil ativo;
+- iniciativa dependente do tipo de ação com termos declarativos;
+- criação completa de entidades por linguagem natural;
+- inferência de tipo para habilidade, habilidade de arma/item, arma, item, classe, subclasse, raça, papel e cyberware;
+- templates de criação fornecidos pelo próprio engine;
+- normalização de dano principal em descrições livres;
+- testes de regressão para perfis, iniciativa e criação assistida.
+
+### Arquitetura
+
+- o perfil `custom-combo` representa o fluxo atual do FichaRPG;
+- `classic-d20-fantasy` oferece uma base old-school configurável;
+- `d10-skill-modern` oferece uma base de atributo + perícia, múltiplas ações, localização e armas de fogo;
+- `custom-horror` é apenas um starter configurável, sem presumir regras a partir de literatura de horror;
+- tabelas específicas/proprietárias ficam fora do núcleo e são fornecidas pelo sistema/aplicativo.
+
 ## [0.7.0] - 2026-09-29
 
 ### Adicionado
