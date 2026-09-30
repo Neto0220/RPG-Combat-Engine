@@ -169,35 +169,107 @@ export function resolveOpposedCheck({
   return { actor: left, opponent: right, winner, success: winner === "actor", margin: left.total - right.total };
 }
 
+function initiativeTermValue(actor, term = {}, context = {}) {
+  const multiplier = number(term.multiplier, 1);
+  let value = 0;
+
+  switch (term.source) {
+    case "constant":
+      value = number(term.value);
+      break;
+    case "attribute":
+      value = actorValue(actor, "attribute", term.key || term.attribute);
+      break;
+    case "skill":
+      value = actorValue(actor, "skill", term.key || term.skill);
+      break;
+    case "actor":
+      value = number(getPath(actor, term.path), number(term.default));
+      break;
+    case "weapon":
+      value = number(getPath(context.weapon || {}, term.path), number(term.default));
+      break;
+    case "action":
+      value = number(getPath(context.action || {}, term.path), number(term.default));
+      break;
+    case "target":
+      value = number(getPath(context.target || {}, term.path), number(term.default));
+      break;
+    case "context":
+      value = number(getPath(context, term.path), number(term.default));
+      break;
+    default:
+      value = number(term.value);
+  }
+
+  return {
+    source: term.source || "constant",
+    key: term.key || term.attribute || term.skill || term.path || null,
+    value,
+    multiplier,
+    total: value * multiplier
+  };
+}
+
+function resolveInitiativeRule(base = {}, context = {}) {
+  const variant = context.actionType ? base.variants?.[context.actionType] : null;
+  if (!variant) return base;
+  return {
+    ...base,
+    ...variant,
+    variants: base.variants
+  };
+}
+
 function initiativeModifier(actor, initiative, context = {}) {
   const attribute = actorValue(actor, "attribute", initiative.attribute);
   const skill = actorValue(actor, "skill", initiative.skill);
   const special = initiative.specialPath ? number(getPath(actor, initiative.specialPath)) : 0;
+  const terms = (initiative.terms || []).map((term) =>
+    initiativeTermValue(actor, term, context)
+  );
+  const termTotal = terms.reduce((sum, term) => sum + term.total, 0);
+
   const mods = collectContextModifiers(actor, {
     ...context,
     tags: ["initiative", ...(context.tags || [])],
-    actionType: "initiative",
+    actionType: context.actionType || "initiative",
     attribute: initiative.attribute,
-    skill: initiative.skill
+    skill: initiative.skill,
+    weapon: context.weapon || null
   });
+
   return {
     attribute,
     skill,
     special,
+    terms,
     modifiers: mods,
-    total: attribute + skill + special + number(initiative.flat) + mods.reduce((sum, item) => sum + item.value, 0)
+    total:
+      attribute +
+      skill +
+      special +
+      termTotal +
+      number(initiative.flat) +
+      mods.reduce((sum, item) => sum + item.value, 0)
   };
 }
 
 export function resolveInitiative({ actors = [], rules = {}, rng = Math.random, context = {} }) {
   const profile = createRulesProfile(rules);
-  const initiative = profile.initiative || {};
+  const baseInitiative = profile.initiative || {};
+  const initiative = resolveInitiativeRule(baseInitiative, context);
   const entries = actors.map((actor, index) => {
-    const roll = rollDice(initiative.die || "1d20", rng);
-    const modifier = initiativeModifier(actor, initiative, context);
+    const actorContext = typeof context.forActor === "function"
+      ? { ...context, ...context.forActor(actor, index) }
+      : context;
+    const actorRule = resolveInitiativeRule(baseInitiative, actorContext);
+    const roll = rollDice(actorRule.die || "1d20", rng);
+    const modifier = initiativeModifier(actor, actorRule, actorContext);
     return {
       actor,
       index,
+      actionType: actorContext.actionType || null,
       roll,
       modifier,
       total: roll.total + modifier.total
