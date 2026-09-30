@@ -389,7 +389,8 @@ export function compileSystemProfile(input = {}) {
           rules: createRulesProfile(input.rules || {}),
           ui: structuredClone(input.ui || {}),
           interpreter: structuredClone(input.interpreter || {}),
-          notes: structuredClone(input.notes || [])
+          notes: structuredClone(input.notes || []),
+          configurationRequired: structuredClone(input.configurationRequired || [])
         };
 
   const sections = Object.entries(profile.ui?.sections || {})
