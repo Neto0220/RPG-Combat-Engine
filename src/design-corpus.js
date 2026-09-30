@@ -705,31 +705,7 @@ export const RPG_DESIGN_CORPUS = Object.freeze([
       gmLoad: "low-medium"
     },
     lessons: ["stress can accumulate across scenes and trigger separate panic resolution","keep horror combat fast enough that avoidance remains attractive","compact character generation supports high lethality"]
-  },
-  {
-    id: "warhammer-40k-imperium-maledictum",
-    name: "Warhammer 40,000: Imperium Maledictum",
-    family: "d100-grimdark-investigation",
-    recognition: ["Wargamer all-time list"],
-    genres: ["grimdark sci-fi","investigation"],
-    signals: ["imperium maledictum","patron","influence","d100","superiority","warhammer 40k"],
-    mechanics: {
-      resolution: "percentile roll-under",
-      successDegrees: "success levels",
-      actionEconomy: "structured combat turns",
-      initiative: "characteristic-based",
-      damageModel: "wounds, armor and critical injuries",
-      resourceModel: "fate/influence/patron-driven resources",
-      progression: "XP skills/talents",
-      narrativeAuthority: "traditional investigative",
-      tacticality: "high",
-      lethality: "high",
-      characterBuild: "role/skill/talent plus patron context",
-      gmLoad: "high"
-    },
-    lessons: ["campaign patron/faction can be a shared rules object","influence/social access can be modeled as resources","investigation and tactical combat can share one d100 core"]
-  }
-]);
+  }]);
 
 function normalize(text) {
   return String(text || "")
