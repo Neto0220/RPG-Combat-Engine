@@ -814,6 +814,14 @@ export function createEntityFromText(text, options = {}) {
     suggestion,
     { overwrite: Boolean(options.overwrite) }
   );
+
+  if (entityType === "weapon" && Array.isArray(entity.dice) && entity.dice.length) {
+    if (!Array.isArray(entity.damageDice) || !entity.damageDice.length) {
+      entity.damageDice = structuredClone(entity.dice);
+    }
+    delete entity.dice;
+  }
+
   return {
     entityType,
     entity,
