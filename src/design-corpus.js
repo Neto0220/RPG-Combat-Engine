@@ -45,7 +45,7 @@ export const RPG_DESIGN_CORPUS = Object.freeze([
     family: "d20-tactical-fantasy",
     recognition: ["major alternative to D&D", "frequent best-of inclusion"],
     genres: ["heroic fantasy","tactical fantasy"],
-    signals: ["três ações","3 ações","three action","graus de sucesso","critical success","critical failure","pathfinder"],
+    signals: ["d20","três ações","3 ações","three action","graus de sucesso","quatro graus","four degrees","critical success","critical failure","pathfinder"],
     mechanics: {
       resolution: "single-d20 roll-over",
       successDegrees: "four degrees",
