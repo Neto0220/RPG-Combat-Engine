@@ -7,6 +7,12 @@ import {
 import { createEntityFromText, interpretMechanics } from "./interpreter.js";
 import { deepMerge, setPath } from "./rules.js";
 import { evaluateScenarioAgainstCorpus, listDesignBenchmarks } from "./design-corpus.js";
+import {
+  synthesizeNarrativeEntity,
+  applyEntitySynthesis,
+  buildEntitySynthesisProviderRequest,
+  mergeEntitySyntheses
+} from "./content-orchestrator.js";
 
 export const AI_MANAGER_VERSION = 1;
 
@@ -1137,6 +1143,30 @@ export function createAIManager(options = {}) {
 
     designBenchmarks() {
       return listDesignBenchmarks();
+    },
+
+    async synthesizeEntity(text, opts = {}) {
+      const profile = api.compile(opts.branchId || null);
+      const local = synthesizeNarrativeEntity(text, {
+        ...opts,
+        profile,
+        baseEntity: opts.baseEntity || {}
+      });
+
+      if (!provider || opts.localOnly) return local;
+
+      const request = buildEntitySynthesisProviderRequest(text, {
+        ...opts,
+        profile,
+        baseEntity: opts.baseEntity || {},
+        localSynthesis: local
+      });
+      const external = await provider.propose(request);
+      return mergeEntitySyntheses(local, external || {});
+    },
+
+    applyEntity(entity, synthesis, opts = {}) {
+      return applyEntitySynthesis(entity, synthesis, opts);
     }
   };
 
