@@ -377,7 +377,7 @@ export function createSystemProfile(id = "custom-combo", overrides = {}) {
   return merged;
 }
 
-export function compileSystemProfile(input = {}) {
+export function compileSystemProfile(input = {}, options = {}) {
   const profile = typeof input === "string"
     ? createSystemProfile(input)
     : input.id && SYSTEM_PROFILE_TEMPLATES[input.id]
