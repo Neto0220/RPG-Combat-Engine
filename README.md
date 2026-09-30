@@ -43,7 +43,7 @@ As mecânicas são declarativas sempre que possível. Em vez de escrever código
 }
 ```
 
-## Camada universal 0.9.0
+## Camada universal 1.0.0
 
 Além do resolvedor de combate original, o motor possui uma camada universal baseada em perfis de regras. Ela cobre testes roll-over e roll-under, testes opostos, iniciativa configurável, diferentes economias de ação, localização e pipeline de dano, recursos arbitrários, progressão, papéis, implantes e armas de fogo.
 
@@ -53,6 +53,27 @@ O núcleo não contém nomes de personagens, classes, habilidades ou jogos espec
 - [Perfis de sistema e compilação de UI](docs/SYSTEM_PROFILES.md)
 - [Matriz de cobertura](docs/SYSTEM_COVERAGE.md)
 - [Integração com aplicativos](docs/APP_INTEGRATION.md)
+- [AI Rule Manager](docs/AI_MANAGER.md)
+
+### Gerenciamento por IA
+
+A versão 1.0 adiciona um gerenciador assistivo que analisa cenários, cria planos de adaptação, modifica perfis declarativos, cria branches de regras e mantém rollback. Ele pode operar localmente ou receber propostas de um provider de modelo conectado.
+
+```js
+import { createAIManager } from "./src/index.js";
+
+const manager = createAIManager({
+  baseProfile: "custom-combo",
+  policy: "assist"
+});
+
+const proposal = await manager.adapt(
+  "Sistema d10 com perícias, múltiplas ações e armas de fogo.",
+  { localOnly: true }
+);
+```
+
+A IA não reescreve código executável em runtime; ela altera a configuração executável do engine dentro de uma superfície validada e auditável.
 
 ### Perfis por livro/sistema
 
