@@ -226,6 +226,19 @@ function extractAttributeBonuses(text) {
   return out;
 }
 
+function normalizeDie(expression) {
+  const value = String(expression || "").replace(/\s+/g, "").toLowerCase();
+  return value.startsWith("d") ? "1" + value : value;
+}
+
+function extractNarratedDamageDice(text) {
+  const raw = compactText(text);
+  const match =
+    raw.match(/\b((?:\d+)?d\d+(?:\s*[+-]\s*\d+)?)\s*(?:de\s*)?(?:dano|damage)\b/i) ||
+    raw.match(/\b(?:dano|damage)\s*(?:de|é|eh|:)?\s*((?:\d+)?d\d+(?:\s*[+-]\s*\d+)?)/i);
+  return match ? normalizeDie(match[1]) : null;
+}
+
 function extractMovement(text) {
   const raw = compactText(text);
   const match = raw.match(/\b(?:deslocamento|movimento|move-se|movem-se|se move|se movem|anda|andam|caminha|caminham|voa|voam|nada|nadam)\s*(?:de|a|at[eé])?\s*(\d+(?:[.,]\d+)?)\s*(m|metros?|ft|p[eé]s?)\b/i);
@@ -462,6 +475,13 @@ export function synthesizeNarrativeEntity(text, options = {}) {
   const facts = buildFacts(raw);
 
   let draft = enrichDraft(entityType, creation.entity || baseEntity, facts);
+  const narratedDamage = extractNarratedDamageDice(raw);
+  if (narratedDamage && entityType === "weapon" && (!Array.isArray(draft.damageDice) || !draft.damageDice.length)) {
+    draft.damageDice = [{ expression: narratedDamage, label: "Dano" }];
+  }
+  if (narratedDamage && ["ability", "weapon_ability", "item_ability"].includes(entityType) && (!Array.isArray(draft.dice) || !draft.dice.length)) {
+    draft.dice = [{ expression: narratedDamage, label: "Dano" }];
+  }
   if (explicitName) draft.name = explicitName;
   if (description && (!draft.description || options.preferNarrativeDescription !== false)) {
     draft.description = description;
