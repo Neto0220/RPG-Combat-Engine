@@ -303,7 +303,7 @@ export function interpretMechanics(text, options = {}) {
     pushMatch(result, "cost", { resource: "mana", amount: result.fields.cost }, 0.99, directManaCost[0]);
   }
 
-  const costRegex = /\b(?:custa|gasta|consome|usar custa|costs?)\s*(\d+(?:[.,]\d+)?)\s*(mana|mp|vida|pv|hp|life|defesa|def|defense|stamina|vigor|energia|energy)\b/gi;
+  const costRegex = /\b(?:custa|gasta|gasto|gastei|consome|consumo|usar custa|costs?)\s*(\d+(?:[.,]\d+)?)\s*(mana|mp|vida|pv|hp|life|defesa|def|defense|stamina|vigor|energia|energy)\b/gi;
   for (const match of mechanicsRaw.matchAll(costRegex)) {
     const amount = number(match[1]);
     const resource = resourceId(match[2]);
